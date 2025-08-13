@@ -110,6 +110,19 @@ input:disabled, button:disabled{opacity:.6; cursor:not-allowed}
 .chart-box{height:260px; position:relative; overflow:auto; contain: strict;}
 .chart-box canvas{display:block; height:100% !important; min-width:100%}
 
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .chart-box {
+    height: auto;
+    min-height: 200px;
+    max-height: 500px;
+  }
+  
+  .chart-card {
+    overflow: auto;
+  }
+}
+
 /* Tables */
 .table-wrap{padding:12px 14px}
 .data-table-wrap {
@@ -1081,8 +1094,8 @@ if (Number.isFinite(limit) && limit>0 && rows.length>limit && (isCircular || typ
           ticks: {
             autoSkip: true,
             maxRotation: 0,
-            callback: function(value) {
-              // Format numeric values on x-axis
+            callback: (indexAxis === 'x') ? undefined : function(value) {
+              // Format numeric values on x-axis (for horizontal bar charts)
               return nice(value);
             }
           }
@@ -1091,7 +1104,11 @@ if (Number.isFinite(limit) && limit>0 && rows.length>limit && (isCircular || typ
           beginAtZero: true,
           ticks: {
             autoSkip: true,
-            maxRotation: 0
+            maxRotation: 0,
+            callback: (indexAxis === 'y') ? undefined : function(value) {
+              // Format numeric values on y-axis (for vertical bar charts)
+              return nice(value);
+            }
           }
         }
       }
@@ -1178,12 +1195,17 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
     if (!isCircular && (cfg.options?.indexAxis!=='y')){
       const labelsCount = (cfg.data?.labels?.length)||0;
       const pxPer = (cfg.type==='line' || cfg.type==='area') ? 40 : 60;
-      const minW = 600;
-      const maxW = 2400; // clamp to avoid oversized canvas
+      const minW = 300; // Reduced minimum for mobile
+      const maxW = 1200; // Reduced maximum to fit within container
       const w = Math.min(maxW, Math.max(minW, labelsCount * pxPer));
       if (prevW !== String(w)) shouldResize = true;
-      // Force our width so Chart.js cannot override during resize
-      canvas.style.setProperty('width', w + 'px', 'important');
+      // Only set explicit width if it's larger than container to enable horizontal scroll
+      if (w > 600) { // Only for charts that need horizontal space
+        canvas.style.setProperty('width', w + 'px', 'important');
+      } else {
+        // For smaller charts, use container width
+        canvas.style.setProperty('width', '100%', 'important');
+      }
       canvas.dataset.w = String(w);
       delete canvas.dataset.h;
     }
@@ -1193,7 +1215,7 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
       const labelsCount = (cfg.data?.labels?.length)||0;
       const pxPer = 34; // per bar row
       const minH = 260;
-      const maxH = 2000; // clamp to avoid oversized canvas
+      const maxH = 1200; // Reduced maximum to fit within container
       const h = Math.min(maxH, Math.max(minH, labelsCount * pxPer));
       if (prevH !== String(h)) shouldResize = true;
       // Override stylesheet's height:100% !important
