@@ -107,7 +107,7 @@ input:disabled, button:disabled{opacity:.6; cursor:not-allowed}
 .chart-head{display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:6px}
 
 /* Charts */
-.chart-box{height:260px; position:relative; overflow:auto}
+.chart-box{height:260px; position:relative; overflow:auto; contain: strict;}
 .chart-box canvas{display:block; height:100% !important; min-width:100%}
 
 /* Tables */
@@ -1133,9 +1133,13 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
     const prevW = canvas.dataset.w || '';
     const prevH = canvas.dataset.h || '';
 
-    // Reset previous overrides to get clean measurement
-    canvas.style.removeProperty('width');
-    canvas.style.removeProperty('height');
+    // Completely reset all inline styles to avoid conflicts
+    canvas.setAttribute('style', '');
+    
+    // Force container-based sizing first
+    canvas.style.display = 'block';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
 
     // Determine target size
     let shouldResize = false;
@@ -1164,8 +1168,8 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
       if (prevH !== String(h)) shouldResize = true;
       // Override stylesheet's height:100% !important
       canvas.style.setProperty('height', h + 'px', 'important');
-// Force width to container to prevent runaway horizontal growth
-canvas.style.setProperty('width', '100%', 'important');
+      // Force width to container to prevent runaway horizontal growth
+      canvas.style.setProperty('width', '100%', 'important');
       canvas.dataset.h = String(h);
       delete canvas.dataset.w;
     }
