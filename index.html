@@ -1055,6 +1055,8 @@ if (Number.isFinite(limit) && limit>0 && rows.length>limit && (isCircular || typ
     data:{ labels, datasets:[{ label: agg.header[1], data: values, fill, tension:0.25 }] },
     options:{
       responsive:true, maintainAspectRatio:false, animation:false,
+      // Pin pixel ratio to avoid apparent CSS growth when DPR changes
+      devicePixelRatio: 1,
       indexAxis,
       plugins:{
         legend:{ display: isCircular || labels.length<=20 },
@@ -1066,7 +1068,7 @@ if (Number.isFinite(limit) && limit>0 && rows.length>limit && (isCircular || typ
     }
   };
 }
-function ensureChart(canvas, cfg){
+function ensureChart(canvas, cfg, shouldResize=false){
   const rec = chartRegistry.get(canvas);
   let chart = rec ? rec.chart : null;
   let ro = rec ? rec.ro : null;
@@ -1090,8 +1092,8 @@ function ensureChart(canvas, cfg){
     // Merge options to allow for dynamic updates without full recreation
     // This is a simplified merge; a more robust solution might deep merge or selectively update
     Object.assign(chart.options, cfg.options);
-    // Ensure layout re-measures after style width/height changes
-    chart.resize();
+    // Only force a resize when CSS dimension actually changed
+    if (shouldResize) chart.resize();
     chart.update('none'); // snappier redraw without animation
   }
   return chart;
@@ -1127,9 +1129,16 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
     const cfg = computeChartConfig(agg, typeSel.value, topN);
     const isCircular = (cfg.type==='pie' || cfg.type==='doughnut' || cfg.type==='polarArea' || cfg.type==='radar');
 
-    // Reset previous overrides
-    canvas.style.width = '';
+    // Keep previously applied dims to detect changes
+    const prevW = canvas.dataset.w || '';
+    const prevH = canvas.dataset.h || '';
+
+    // Reset previous overrides to get clean measurement
+    canvas.style.removeProperty('width');
     canvas.style.removeProperty('height');
+
+    // Determine target size
+    let shouldResize = false;
 
     // Horizontal scroll for vertical charts (indexAxis !== 'y')
     if (!isCircular && (cfg.options?.indexAxis!=='y')){
@@ -1138,7 +1147,11 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
       const minW = 600;
       const maxW = 2400; // clamp to avoid oversized canvas
       const w = Math.min(maxW, Math.max(minW, labelsCount * pxPer));
-      canvas.style.width = w + 'px';
+      if (prevW !== String(w)) shouldResize = true;
+      // Force our width so Chart.js cannot override during resize
+      canvas.style.setProperty('width', w + 'px', 'important');
+      canvas.dataset.w = String(w);
+      delete canvas.dataset.h;
     }
 
     // Vertical scroll for horizontal bar charts (indexAxis === 'y')
@@ -1148,11 +1161,21 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
       const minH = 260;
       const maxH = 2000; // clamp to avoid oversized canvas
       const h = Math.min(maxH, Math.max(minH, labelsCount * pxPer));
+      if (prevH !== String(h)) shouldResize = true;
       // Override stylesheet's height:100% !important
       canvas.style.setProperty('height', h + 'px', 'important');
+      canvas.dataset.h = String(h);
+      delete canvas.dataset.w;
     }
 
-    ensureChart(canvas, cfg);
+    // Circular charts: lock to container (no custom width/height)
+    if (isCircular){
+      if (prevW || prevH) shouldResize = true; // cleared overrides
+      delete canvas.dataset.w;
+      delete canvas.dataset.h;
+    }
+
+    ensureChart(canvas, cfg, shouldResize);
   }
   redrawBtn.onclick = draw; pngBtn.onclick = ()=>{ const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download = `${titleForFile}.png`; a.click(); };
   draw();
