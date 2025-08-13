@@ -1038,13 +1038,14 @@ function computeChartConfig(agg, typePref, topN){
 
   const isCircular = (type==='pie' || type==='doughnut' || type==='polarArea' || type==='radar');
 
-  // Only group into "Other" for circular charts; bar/line show all points (scrollable)
-  let rows=[...agg.rows];
-  if (isCircular && typeof topN==='number' && rows.length>topN){
-    const head=rows.slice(0,topN);
-    const other=rows.slice(topN).reduce((a,b)=>a+(+b[1]||0),0);
-    rows=other?[...head,['Other',other]]:head;
-  }
+  // Limit categories when Top-N provided (applies to circular and bar charts); line/area keep full series
+let rows=[...agg.rows];
+const limit = Number(topN);
+if (Number.isFinite(limit) && limit>0 && rows.length>limit && (isCircular || type==='bar')){
+  const head = rows.slice(0, limit);
+  const other = rows.slice(limit).reduce((a,b)=> a + (+b[1] || 0), 0);
+  rows = other ? [...head, ['Other', other]] : head;
+}
 
   const labels=rows.map(r=>String(r[0]));
   const values=rows.map(r=>Number(r[1])||0);
@@ -1057,7 +1058,9 @@ function computeChartConfig(agg, typePref, topN){
       indexAxis,
       plugins:{
         legend:{ display: isCircular || labels.length<=20 },
-        tooltip:{ callbacks:{ label: ctx => { const v = ctx.parsed?.y ?? ctx.parsed ?? ctx.raw; return `${ctx.dataset.label}: ${nice(v)}`; }}}
+        tooltip:{ callbacks:{ label: ctx => { const v = ctx.parsed?.y ?? ctx.parsed ?? ctx.raw; return `${ctx.dataset.label}: ${nice(v)}`; }}},
+        // Enable point decimation for line/area to keep performance with many points
+        decimation:{ enabled: (type==='line'), algorithm:'lttb' }
       },
       scales: isCircular ? {} : { x:{ ticks:{ autoSkip:true, maxRotation:0 } }, y:{ beginAtZero:true, ticks:{ callback:v=>nice(v) } } }
     }
@@ -1087,7 +1090,9 @@ function ensureChart(canvas, cfg){
     // Merge options to allow for dynamic updates without full recreation
     // This is a simplified merge; a more robust solution might deep merge or selectively update
     Object.assign(chart.options, cfg.options);
-    chart.update();
+    // Ensure layout re-measures after style width/height changes
+    chart.resize();
+    chart.update('none'); // snappier redraw without animation
   }
   return chart;
 }
@@ -1131,7 +1136,8 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
       const labelsCount = (cfg.data?.labels?.length)||0;
       const pxPer = (cfg.type==='line' || cfg.type==='area') ? 40 : 60;
       const minW = 600;
-      const w = Math.max(minW, labelsCount * pxPer);
+      const maxW = 2400; // clamp to avoid oversized canvas
+      const w = Math.min(maxW, Math.max(minW, labelsCount * pxPer));
       canvas.style.width = w + 'px';
     }
 
@@ -1140,7 +1146,8 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
       const labelsCount = (cfg.data?.labels?.length)||0;
       const pxPer = 34; // per bar row
       const minH = 260;
-      const h = Math.max(minH, labelsCount * pxPer);
+      const maxH = 2000; // clamp to avoid oversized canvas
+      const h = Math.min(maxH, Math.max(minH, labelsCount * pxPer));
       // Override stylesheet's height:100% !important
       canvas.style.setProperty('height', h + 'px', 'important');
     }
