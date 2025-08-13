@@ -1065,11 +1065,30 @@ function computeChartConfig(agg, typePref, topN){
 }
 function ensureChart(canvas, cfg){
   const rec = chartRegistry.get(canvas);
-  if (rec){ try{ rec.chart.destroy(); }catch{} if (rec.ro){ try{ rec.ro.disconnect(); }catch{} } chartRegistry.delete(canvas); }
-  const chart = new Chart(canvas.getContext('2d'), cfg);
-  const ro = new ResizeObserver(()=>{ if (chart) chart.resize(); });
-  const parent = canvas.parentElement; if (parent) ro.observe(parent);
-  chartRegistry.set(canvas, { chart, ro });
+  let chart = rec ? rec.chart : null;
+  let ro = rec ? rec.ro : null;
+
+  // Check if chart type has changed or if chart doesn't exist
+  if (!chart || chart.config.type !== cfg.type) {
+    if (chart) {
+      try { chart.destroy(); } catch {}
+      if (ro) { try { ro.disconnect(); } catch {} }
+      chartRegistry.delete(canvas);
+    }
+    // Create new chart
+    chart = new Chart(canvas.getContext('2d'), cfg);
+    ro = new ResizeObserver(()=>{ if (chart) chart.resize(); });
+    const parent = canvas.parentElement; if (parent) ro.observe(parent);
+    chartRegistry.set(canvas, { chart, ro });
+  } else {
+    // Update existing chart
+    chart.data.labels = cfg.data.labels;
+    chart.data.datasets[0].data = cfg.data.datasets[0].data;
+    // Merge options to allow for dynamic updates without full recreation
+    // This is a simplified merge; a more robust solution might deep merge or selectively update
+    Object.assign(chart.options, cfg.options);
+    chart.update();
+  }
   return chart;
 }
 function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=20, titleForFile='chart'){
