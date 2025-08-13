@@ -51,21 +51,60 @@ body{
 *::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px}
 *::-webkit-scrollbar-track{background:transparent}
 
-.wrap{max-width: clamp(960px, 92vw, 1200px); margin: var(--s-8) auto; padding: 0 var(--s-7)}
-.bar{display:flex; gap: var(--s-4); flex-wrap:wrap; align-items:center}
+.wrap{
+  max-width: clamp(960px, 92vw, 1200px);
+  margin: var(--s-8) auto;
+  padding: 0 var(--s-7);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.bar{
+  display: flex;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  align-items: center;
+  background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: var(--s-3) var(--s-4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
 
 /* Controls */
 input,button,select{
-  background:#ffffff; color:var(--ink);
-  border:1px solid var(--border); border-radius:10px;
+  background: #ffffff;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   padding: var(--s-3) var(--s-4);
   box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  transition: all 0.2s ease;
+}
+input:focus,button:focus,select:focus{
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  border-color: var(--accent);
 }
 input::placeholder{color:color-mix(in oklab, var(--muted) 70%, transparent)}
-button{cursor:pointer; background:var(--panel2)}
-button:hover{filter:brightness(1.03)}
-button:active{transform:translateY(1px)}
-input:disabled, button:disabled{opacity:.6; cursor:not-allowed}
+button{
+  cursor: pointer;
+  background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+  transition: all 0.2s ease;
+  font-weight: 500;
+  border: 1px solid #cbd5e1;
+}
+button:hover{
+  background: linear-gradient(145deg, #f1f5f9, #cbd5e1);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+button:active{
+  transform: translateY(1px);
+}
+input:disabled, button:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
 
 /* Focus */
 :where(a,button,input,select,textarea,[tabindex]):focus-visible{
@@ -75,40 +114,242 @@ input:disabled, button:disabled{opacity:.6; cursor:not-allowed}
 
 .muted{color:var(--muted)}
 .tag{
-  background:#eef2ff; border:1px solid #c7d2fe; color:#1e3a8a;
-  padding:2px 8px; border-radius:var(--pill)
+  background: linear-gradient(145deg, #e0e7ff, #c7d2fe);
+  border: 1px solid #c7d2fe;
+  color: #1e3a8a;
+  padding: 2px 8px;
+  border-radius: var(--pill);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* Sections & grid */
 .section{
-  background:var(--panel); border:1px solid var(--border);
-  border-radius:var(--radius); box-shadow:var(--shadow); padding:var(--s-6); margin:12px 0
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--s-6);
+  margin: 16px 0;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
-.grid{display:grid; gap:var(--s-6); grid-template-columns:repeat(auto-fit, minmax(400px, 1fr)); max-width:1200px; margin:0 auto}
-@media (max-width:1000px){.grid{grid-template-columns:1fr}}
+
+.section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa);
+}
+
+.section:hover {
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+  transform: translateY(-3px);
+}
+.grid{
+  display: grid;
+  gap: var(--s-6);
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--s-2);
+}
+@media (max-width:1000px){
+  .grid{
+    grid-template-columns:1fr;
+    padding: 0;
+  }
+}
 
 /* Cards */
 .card{
-  background:var(--panel2); border:1px solid var(--border);
-  border-radius:var(--radius-lg); display:flex; flex-direction:column; min-height:0;
-  box-shadow: var(--shadow);
+  background: linear-gradient(145deg, #ffffff, #f8f9fa);
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa);
+}
+
+.card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+  transform: translateY(-3px);
 }
 .card-head{
-  display:flex; justify-content:space-between; align-items:center;
-  padding:12px 14px; border-bottom:1px solid var(--border); background:var(--panel); border-radius: var(--radius-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #edf2f7;
+  background: linear-gradient(180deg, #ffffff, #f9fafb);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
-.card-title{margin:0; font-size:15px}
-.card-sub{font-size:12px; color:var(--muted)}
+.card-title{margin:0; font-size:16px; font-weight: 600;}
+.card-sub{font-size:13px; color:var(--muted)}
 .card-controls{
-  display:flex; gap:8px; flex-wrap:wrap; padding:10px 14px; border-bottom:1px solid var(--border); background:var(--panel2)
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid #edf2f7;
+  background: linear-gradient(180deg, #f9fafb, #f1f5f9);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
-.chart-cards{display:grid; grid-template-columns:1fr; gap:10px; padding:10px 14px}
-.chart-card{border:1px solid var(--border); border-radius:12px; padding:8px; background:var(--panel)}
-.chart-head{display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:6px}
+.chart-cards{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  margin: 12px 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+.chart-card{
+  background: linear-gradient(145deg, #ffffff, #f8f9fa);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.chart-card:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+.chart-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #edf2f7;
+}
 
 /* Charts */
-.chart-box{height:260px; position:relative; overflow:auto; contain: strict;}
-.chart-box canvas{display:block; height:100% !important; min-width:100%}
+.chart-box {
+  height: 260px;
+  position: relative;
+  overflow: auto;
+  contain: strict;
+  background: linear-gradient(145deg, #ffffff, #f8f9fa);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+}
+.chart-box canvas {
+  display: block;
+  height: 100% !important;
+  min-width: 100%;
+  border-radius: 8px;
+}
+
+/* Modern chart styling */
+.chart-card {
+  background: linear-gradient(145deg, #ffffff, #f8f9fa);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa);
+}
+
+.chart-card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+  transform: translateY(-3px);
+}
+
+.chart-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+  background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.chart-controls select,
+.chart-controls input,
+.chart-controls button {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.chart-controls select:focus,
+.chart-controls input:focus {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  border-color: #2563eb;
+}
+
+.chart-controls button {
+  background: linear-gradient(145deg, #2563eb, #1d4ed8);
+  color: white;
+  border: 1px solid #1d4ed8;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+.chart-controls button:hover {
+  background: linear-gradient(145deg, #1d4ed8, #1e40af);
+  border-color: #1e40af;
+  box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+  transform: translateY(-1px);
+}
+
+.chart-controls button:active {
+  transform: translateY(1px);
+}
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
@@ -124,19 +365,40 @@ input:disabled, button:disabled{opacity:.6; cursor:not-allowed}
 }
 
 /* Tables */
-.table-wrap{padding:12px 14px; overflow: auto;}
+.table-wrap{
+  padding: 16px;
+  overflow: auto;
+  background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  margin: 12px 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
 .data-table-wrap {
   width: 100%;
-  border:1px solid var(--border); border-radius:12px; overflow:auto; max-height:520px;
-  position:relative; background:var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: auto;
+  max-height: 520px;
+  position: relative;
+  background: var(--panel);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 table{
-  width:auto; border-collapse:collapse; background:var(--panel);
+  width: auto;
+  border-collapse: collapse;
+  background: var(--panel);
   box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  border-radius: 8px;
+  overflow: hidden;
 }
 th,td{
-  border-bottom:1px solid var(--border); padding:6px 8px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  border-bottom:1px solid var(--border);
+  padding: 10px 12px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-size: 14px;
 }
 th {
   min-width: 120px;
@@ -145,15 +407,41 @@ td {
   min-width: 100px;
 }
 th{
-  position:sticky; top:0;
-  background:#f1f5f9; /* light slate */
-  cursor:pointer; z-index:2;
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, #f8fafc, #e2e8f0);
+  cursor: pointer;
+  z-index: 2;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  transition: background 0.2s ease;
 }
-th .sort{opacity:.7; margin-left:6px}
-tbody tr:nth-child(even){background:#f8fafc}
+th:hover {
+  background: linear-gradient(180deg, #f1f5f9, #e2e8f0);
+}
+th .sort{
+  opacity:.7;
+  margin-left:6px;
+  transition: opacity 0.2s ease;
+}
+th:hover .sort {
+  opacity: 1;
+}
+tbody tr:nth-child(even){
+  background:#f8fafc
+}
+tbody tr:hover {
+  background: #f1f5f9;
+}
 
 tfoot td{
-  font-weight:600; background:#f1f5f9; position:sticky; bottom: -1px; z-index:1;
+  font-weight: 600;
+  background: linear-gradient(0deg, #f8fafc, #e2e8f0);
+  position: sticky;
+  bottom: -1px;
+  z-index: 1;
 }
 
 /* Sticky footer alternative */
@@ -163,49 +451,178 @@ tfoot td{
 }
 
 .card-foot{
-  display:flex; gap:8px; flex-wrap:wrap; padding:12px 14px; border-top:1px solid var(--border); background:var(--panel)
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px;
+  border-top: 1px solid #edf2f7;
+  background: linear-gradient(0deg, #f8fafc, #e2e8f0);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
-.small{font-size:12px}
+.small{font-size:13px}
 
 /* Data table controls */
-.table-controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0 10px}
-.pager{display:flex; gap:6px; align-items:center}
-.pager button{padding:6px 10px}
-.count{color:var(--muted)}
+.table-controls{
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 12px 0;
+  background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+.table-controls label {
+  font-size: 14px;
+  font-weight: 500;
+}
+.table-controls input,
+.table-controls select {
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+.table-controls input:focus,
+.table-controls select:focus {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  border-color: #2563eb;
+}
+.pager{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.pager button{
+  padding: 8px 12px;
+  background: linear-gradient(145deg, #2563eb, #1d4ed8);
+  color: white;
+  border: 1px solid #1d4ed8;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+.pager button:hover{
+  background: linear-gradient(145deg, #1d4ed8, #1e40af);
+  border-color: #1e40af;
+  box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+  transform: translateY(-1px);
+}
+.pager button:active{
+  transform: translateY(1px);
+}
+.pager button:disabled{
+  background: #94a3b8;
+  border-color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+.count{
+  color:var(--muted);
+  font-size: 14px;
+}
 .data-table-wrap{
-  border:1px solid var(--border); border-radius:12px; overflow:auto; max-height:520px;
-  position:relative; background:var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: auto;
+  max-height: 520px;
+  position: relative;
+  background: var(--panel);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 .sticky{position:sticky; top:0; background:#f1f5f9; z-index:1}
 
 /* Modal */
 .modal{
-  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-  background:rgba(15,23,42,.35); z-index:50;
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.5);
+  z-index: 50;
+  backdrop-filter: blur(4px);
 }
-.modal.open{display:flex}
+.modal.open{
+  display: flex;
+}
 .modal-card{
-  width:min(960px,92vw); max-height:86vh; overflow:auto; background:var(--panel);
-  border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px;
-  transform:translateY(4px); opacity:0; transition:opacity .18s, transform .18s;
+  width: min(960px, 92vw);
+  max-height: 86vh;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  padding: 14px;
+  transform: translateY(4px);
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
 }
-.modal.open .modal-card{transform:none; opacity:1}
+.modal.open .modal-card{
+  transform: none;
+  opacity: 1;
+}
 .modal-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px}
 .modal-head h3{margin:0}
-.role-table{width:100%; border-collapse:collapse}
-.role-table th,.role-table td{border-bottom:1px solid var(--border); padding:6px 8px}
+.role-table{
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.role-table th,
+.role-table td{
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+}
+.role-table th{
+  background: linear-gradient(180deg, #f8fafc, #e2e8f0);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
 
 /* Toast */
 .toast{
-  position:fixed; right:16px; bottom:16px; background:#ffffff; border:1px solid var(--border);
-  color:var(--ink); padding:10px 12px; border-radius:10px; box-shadow:var(--shadow); z-index:60;
-  transform:translateY(6px); opacity:.98; transition:opacity .2s, transform .2s;
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  background: linear-gradient(145deg, #ffffff, #f8f9fa);
+  border: 1px solid #e2e8f0;
+  color: var(--ink);
+  padding: 10px 12px;
+  border-radius: 10px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 60;
+  transform: translateY(6px);
+  opacity: 0.98;
+  transition: opacity 0.2s, transform 0.2s;
 }
-.toast.show{transform:none; opacity:1}
+.toast.show{
+  transform: none;
+  opacity: 1;
+}
 
 /* Motion preferences */
 @media (prefers-reduced-motion: reduce){
   *{animation:none !important; transition:none !important}
+}
+
+mark {
+  background-color: #fff080;
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
 }
 
 </style>
@@ -903,10 +1320,15 @@ function renderRawBody(){
 const onSearch = debounce(()=>{ QUERY = $('#searchInput').value; PAGE=1; applyFilter(); renderRawBody(); }, 200);
 
 /* ========= roles + auto plan (no-AI) ========= */
+// ERP System Optimization: Enhanced patterns for common ERP data structures
 const NAME_PATTERNS = {
   metric: /(amount|total|qty|quantity|price|unit[_\s-]*price|revenue|sales|cost|profit|margin|rate|percent|%|tax|fee|金额|总额|数量|单价|价格|费|税)/i,
   code: /(code|id|sku|account|acct|编号|编码|货号|料号|单号|订单号|客户号|编号$|代码$|no\.?$|number$)/i,
-  date: /(date|time|day|month|quarter|year|日期|时间|月份|季度|年份)/i
+  date: /(date|time|day|month|quarter|year|日期|时间|月份|季度|年份)/i,
+  // ERP-specific patterns
+  erpAmount: /(amount|total|price|cost|revenue|sales|profit|margin)/i,
+  erpQuantity: /(qty|quantity)/i,
+  erpCode: /(code|id|sku|account|acct|编号|编码|货号|料号|单号|订单号|客户号)/i
 };
 const CODE_LIKE_NUM = /(zip|postal|phone|tel|nid|ic|passport|order|invoice|po|so)$/i;
 
@@ -919,15 +1341,21 @@ function inferRole(col, profile, rows) {
   const isCodeByName = NAME_PATTERNS.code.test(name);
   const isDateByName = NAME_PATTERNS.date.test(name);
   const isMetricByName = NAME_PATTERNS.metric.test(name);
-
+  // ERP-specific patterns
+  const isERPAmount = NAME_PATTERNS.erpAmount.test(name);
+  const isERPQuantity = NAME_PATTERNS.erpQuantity.test(name);
+  const isERPCode = NAME_PATTERNS.erpCode.test(name);
+  
   if (type === 'date' || isDateByName) return { role: 'date' };
   if (type === 'number') {
+    // Prioritize Amount columns in ERP systems
+    if (isERPAmount) return { role: 'metric:strong' };
     if (isMetricByName) return { role: 'metric:strong' };
     if (isCodeByName || CODE_LIKE_NUM.test(name)) return { role: 'id' };
     return { role: 'metric' };
   }
   if (type === 'string') {
-    if (isCodeByName) return { role: 'id' };
+    if (isERPCode || isCodeByName) return { role: 'id' };
     if (uniqRatio > 0.95) return { role: 'id' };
     return { role: 'dimension' };
   }
@@ -936,8 +1364,59 @@ function inferRole(col, profile, rows) {
 
 function pickPrimaryMetric(profile, rows) {
   const numCols = profile.columns.filter(c => c.type === 'number');
+  
+  // ERP System Optimization: Explicitly prioritize key financial columns first
+  const priorityPatterns = [
+    /amount/i,
+    /price/i,
+    /total.*price/i,
+    /revenue/i,
+    /cost/i,
+    /sales/i,
+    /profit/i,
+    /margin/i,
+    /tax/i,
+    /fee/i,
+    /discount/i,
+    /invoice/i,
+    /payment/i,
+    /balance/i,
+    /budget/i,
+    /expense/i,
+    /income/i,
+    /earnings/i,
+    /roi/i,
+    /percentage/i,
+    /rate/i,
+    /ratio/i,
+    /followers/i,
+    /count/i,
+    /quantity/i,
+    /qty/i
+  ];
+  
+  // Check for each priority pattern in order
+  for (const pattern of priorityPatterns) {
+    const matchedCols = numCols.filter(c => pattern.test(c.name));
+    if (matchedCols.length > 0) {
+      return matchedCols[0];
+    }
+  }
+  
+  // Then look for other strong metrics
   const scored = numCols.map(c => {
-    const nameScore = NAME_PATTERNS.metric.test(c.name) ? 2 : 0;
+    let nameScore = NAME_PATTERNS.metric.test(c.name) ? 2 : 0;
+    
+    // Give extra points to key financial terms
+    if (/amount/i.test(c.name)) nameScore += 7;
+    else if (/price/i.test(c.name)) nameScore += 6;
+    else if (/total.*price/i.test(c.name)) nameScore += 6;
+    else if (/(revenue|sales|profit|margin)/i.test(c.name)) nameScore += 5;
+    else if (/(tax|fee|discount|invoice|payment)/i.test(c.name)) nameScore += 4;
+    else if (/(balance|budget|expense|income|earnings)/i.test(c.name)) nameScore += 4;
+    else if (/(roi|percentage|rate|ratio)/i.test(c.name)) nameScore += 3;
+    else if (/(followers|count|quantity|qty)/i.test(c.name)) nameScore += 2;
+    
     const vals = rows.slice(0, 2000).map(r => toNum(r[c.name])).filter(Number.isFinite);
     const mean = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
     const varc = vals.length ? vals.reduce((a,b)=>a+(b-mean)*(b-mean),0)/vals.length : 0;
@@ -1076,24 +1555,84 @@ if (Number.isFinite(limit) && limit>0 && rows.length>limit && (isCircular || typ
 
   return {
     type,
-    data:{ labels, datasets:[{ label: agg.header[1], data: values, fill, tension:0.25 }] },
+    data:{
+      labels,
+      datasets:[{
+        label: agg.header[1],
+        data: values,
+        fill,
+        tension: 0.4,
+        borderColor: '#2563eb',
+        backgroundColor: (type === 'pie' || type === 'doughnut')
+          ? [
+            '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe',
+            '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5',
+            '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe',
+            '#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7'
+          ]
+          : 'rgba(37, 99, 235, 0.1)',
+        pointBackgroundColor: '#2563eb',
+        pointRadius: 4,
+        borderWidth: 2,
+        borderRadius: type === 'bar' ? 4 : 0,
+        borderSkipped: false
+      }]
+    },
     options:{
-      responsive:true, maintainAspectRatio:false, animation:false,
+      responsive:true,
+      maintainAspectRatio:false,
+      animation:{
+        duration: 1000,
+        easing: 'easeOutQuart'
+      },
       // Pin pixel ratio to avoid apparent CSS growth when DPR changes
       devicePixelRatio: 1,
       indexAxis,
       plugins:{
-        legend:{ display: isCircular || labels.length<=20 },
-        tooltip:{ callbacks:{ label: ctx => { const v = ctx.parsed?.y ?? ctx.parsed ?? ctx.raw; return `${ctx.dataset.label}: ${nice(v)}`; }}},
+        legend:{
+          display: isCircular || labels.length<=20,
+          labels: {
+            font: {
+              size: 12,
+              family: 'system-ui, Segoe UI, Arial, sans-serif'
+            },
+            padding: 20,
+            usePointStyle: true,
+            pointStyle: 'circle'
+          }
+        },
+        tooltip:{
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          titleColor: '#0b1220',
+          bodyColor: '#0b1220',
+          borderColor: '#e2e8f0',
+          borderWidth: 1,
+          cornerRadius: 8,
+          displayColors: true,
+          callbacks:{
+            label: ctx => {
+              const v = ctx.parsed?.y ?? ctx.parsed ?? ctx.raw;
+              return `${ctx.dataset.label}: ${nice(v)}`;
+            }
+          }
+        },
         // Enable point decimation for line/area to keep performance with many points
         decimation:{ enabled: (type==='line'), algorithm:'lttb' }
       },
       scales: isCircular ? {} : {
         x: {
           beginAtZero: true,
+          grid: {
+            color: 'rgba(226, 232, 240, 0.3)',
+            drawBorder: true
+          },
           ticks: {
             autoSkip: true,
             maxRotation: 0,
+            font: {
+              size: 11,
+              family: 'system-ui, Segoe UI, Arial, sans-serif'
+            },
             callback: (indexAxis === 'x') ? undefined : function(value) {
               // Format numeric values on x-axis (for horizontal bar charts)
               return nice(value);
@@ -1102,9 +1641,17 @@ if (Number.isFinite(limit) && limit>0 && rows.length>limit && (isCircular || typ
         },
         y: {
           beginAtZero: true,
+          grid: {
+            color: 'rgba(226, 232, 240, 0.3)',
+            drawBorder: true
+          },
           ticks: {
             autoSkip: true,
             maxRotation: 0,
+            font: {
+              size: 11,
+              family: 'system-ui, Segoe UI, Arial, sans-serif'
+            },
             callback: (indexAxis === 'y') ? undefined : function(value) {
               // Format numeric values on y-axis (for vertical bar charts)
               return nice(value);
@@ -1149,7 +1696,10 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
   const c = document.createElement('div'); c.className='chart-card';
   const head = document.createElement('div'); head.className='chart-head';
   const left = document.createElement('div'); left.className='small muted'; left.textContent = `Chart for: ${agg.header[1]} by ${agg.header[0]}`;
-  const right = document.createElement('div'); right.style.display='flex'; right.style.gap='8px'; right.style.flexWrap='wrap';
+  
+  // Create chart controls container
+  const controls = document.createElement('div'); controls.className='chart-controls';
+  
   const typeSel = document.createElement('select');
   typeSel.innerHTML = `
     <option value="auto">Auto</option>
@@ -1162,12 +1712,19 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
     <option value="polarArea">Polar Area</option>
     <option value="radar">Radar</option>`;
   typeSel.value = defaultType;
-  const topNInput = document.createElement('input'); topNInput.type='number'; topNInput.min='3'; topNInput.max='999'; topNInput.value=String(defaultTopN);
-  const topNHint = document.createElement('span'); topNHint.className='muted small'; topNHint.textContent='Top-N: Max items for pie/doughnut charts (3-999, default: 20)';
+  
+  const topNInput = document.createElement('input');
+  topNInput.type='number';
+  topNInput.min='3';
+  topNInput.max='999';
+  topNInput.value=String(defaultTopN);
+  topNInput.placeholder='Top-N';
+  
   const redrawBtn = document.createElement('button'); redrawBtn.textContent='Redraw';
   const pngBtn = document.createElement('button'); pngBtn.textContent='Download PNG';
-  right.append(typeSel, topNInput, topNHint, redrawBtn, pngBtn);
-  head.append(left, right);
+  
+  controls.append(typeSel, topNInput, redrawBtn, pngBtn);
+  head.append(left, controls);
   c.appendChild(head);
   const box = document.createElement('div'); box.className='chart-box';
   const canvas = document.createElement('canvas'); box.appendChild(canvas); c.appendChild(box); chartsContainer.appendChild(c);
@@ -1175,10 +1732,6 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
     const topN = Number(topNInput.value)||20;
     const cfg = computeChartConfig(agg, typeSel.value, topN);
     const isCircular = (cfg.type==='pie' || cfg.type==='doughnut' || cfg.type==='polarArea' || cfg.type==='radar');
-
-    // Keep previously applied dims to detect changes
-    const prevW = canvas.dataset.w || '';
-    const prevH = canvas.dataset.h || '';
 
     // Completely reset all inline styles to avoid conflicts
     canvas.setAttribute('style', '');
@@ -1198,7 +1751,6 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
       const minW = 300; // Reduced minimum for mobile
       const maxW = 1200; // Reduced maximum to fit within container
       const w = Math.min(maxW, Math.max(minW, labelsCount * pxPer));
-      if (prevW !== String(w)) shouldResize = true;
       // Only set explicit width if it's larger than container to enable horizontal scroll
       if (w > 600) { // Only for charts that need horizontal space
         canvas.style.setProperty('width', w + 'px', 'important');
@@ -1206,8 +1758,7 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
         // For smaller charts, use container width
         canvas.style.setProperty('width', '100%', 'important');
       }
-      canvas.dataset.w = String(w);
-      delete canvas.dataset.h;
+      shouldResize = true;
     }
 
     // Vertical scroll for horizontal bar charts (indexAxis === 'y')
@@ -1217,20 +1768,16 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
       const minH = 260;
       const maxH = 1200; // Reduced maximum to fit within container
       const h = Math.min(maxH, Math.max(minH, labelsCount * pxPer));
-      if (prevH !== String(h)) shouldResize = true;
       // Override stylesheet's height:100% !important
       canvas.style.setProperty('height', h + 'px', 'important');
       // Force width to container to prevent runaway horizontal growth
       canvas.style.setProperty('width', '100%', 'important');
-      canvas.dataset.h = String(h);
-      delete canvas.dataset.w;
+      shouldResize = true;
     }
 
     // Circular charts: lock to container (no custom width/height)
     if (isCircular){
-      if (prevW || prevH) shouldResize = true; // cleared overrides
-      delete canvas.dataset.w;
-      delete canvas.dataset.h;
+      shouldResize = true;
     }
 
     ensureChart(canvas, cfg, shouldResize);
@@ -1353,11 +1900,11 @@ function renderAggTable(agg, container, previewN=10){
   foot.appendChild(dl);
   container.appendChild(foot);
   
-  // Update indicators function
-  function updateIndicators() {
-    headerSortSpans.forEach((s, i) => {
-      s.textContent = (i === sortIdx) ? (sortDir === 'asc' ? '↑' : '↓') : '';
-    });
+  // Function to highlight search terms in text
+  function highlightText(text, query) {
+    if (!query) return text;
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
   }
   
   // Filter rows based on search query
@@ -1416,11 +1963,11 @@ function renderAggTable(agg, container, previewN=10){
     // Get rows to display
     const displayRows = filteredRows.slice(start, end);
     
-    // Render rows
+    // Render rows with highlighted search terms
     displayRows.forEach(r => {
       const tr = document.createElement('tr');
       const td0 = document.createElement('td');
-      td0.textContent = String(r[0]);
+      td0.innerHTML = highlightText(String(r[0]), searchQuery);
       const td1 = document.createElement('td');
       td1.textContent = nice(Number(r[1]) || 0);
       tr.append(td0, td1);
@@ -1471,7 +2018,6 @@ function renderAggTable(agg, container, previewN=10){
     sortRows();
     renderTableBody();
     renderTableFooter();
-    updateIndicators();
   }
   
   // Event listeners
