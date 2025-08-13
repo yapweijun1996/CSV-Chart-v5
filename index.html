@@ -1164,6 +1164,8 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
       if (prevH !== String(h)) shouldResize = true;
       // Override stylesheet's height:100% !important
       canvas.style.setProperty('height', h + 'px', 'important');
+// Force width to container to prevent runaway horizontal growth
+canvas.style.setProperty('width', '100%', 'important');
       canvas.dataset.h = String(h);
       delete canvas.dataset.w;
     }
