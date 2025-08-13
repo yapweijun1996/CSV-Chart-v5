@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CSV → Aggregates + Cards + Data Table (Auto + Manual + More Charts, Improved)</title>
+
+<!-- Chart.js v4 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<!-- PapaParse -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<style>
+  :root{
+  /* Light palette */
+  --bg:#f7fafc;            /* page bg */
+  --panel:#ffffff;         /* main cards/sections */
+  --panel2:#f9fafb;        /* secondary cards */
+  --panel-bg:#ffffff;      /* tables/charts bg */
+  --ink:#0b1220;           /* primary text */
+  --muted:#64748b;         /* secondary text */
+  --border:#e2e8f0;        /* borders */
+  --accent:#2563eb;        /* brand accent (blue) */
+
+  /* Elevation & shape */
+  --radius-xs:8px; --radius:14px; --radius-lg:16px; --pill:999px;
+  --shadow:0 8px 24px rgba(15, 23, 42, .08);
+
+  /* Type & spacing */
+  --fs-0:0.875rem; /* 14px */
+  --fs-1:1rem;     /* 16px */
+  --lh:1.5;
+
+  --s-1:4px; --s-2:6px; --s-3:8px; --s-4:10px; --s-5:12px; --s-6:14px; --s-7:16px; --s-8:20px;
+}
+
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:system-ui, Segoe UI, Arial, sans-serif;
+  font-size:var(--fs-0); line-height:var(--lh);
+  text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased;
+}
+
+:root{ accent-color: var(--accent); }
+::selection{background:color-mix(in oklab, var(--accent) 20%, transparent);}
+
+*{scrollbar-color: var(--border) transparent;}
+*::-webkit-scrollbar{height:10px;width:10px}
+*::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px}
+*::-webkit-scrollbar-track{background:transparent}
+
+.wrap{max-width: clamp(960px, 92vw, 1200px); margin: var(--s-8) auto; padding: 0 var(--s-7)}
+.bar{display:flex; gap: var(--s-4); flex-wrap:wrap; align-items:center}
+
+/* Controls */
+input,button,select{
+  background:#ffffff; color:var(--ink);
+  border:1px solid var(--border); border-radius:10px;
+  padding: var(--s-3) var(--s-4);
+  box-shadow: 0 1px 2px rgba(15,23,42,.04);
+}
+input::placeholder{color:color-mix(in oklab, var(--muted) 70%, transparent)}
+button{cursor:pointer; background:var(--panel2)}
+button:hover{filter:brightness(1.03)}
+button:active{transform:translateY(1px)}
+input:disabled, button:disabled{opacity:.6; cursor:not-allowed}
+
+/* Focus */
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{
+  outline:2px solid color-mix(in oklab, var(--accent) 80%, white 20%);
+  outline-offset:2px; border-color:var(--accent);
+}
+
+.muted{color:var(--muted)}
+.tag{
+  background:#eef2ff; border:1px solid #c7d2fe; color:#1e3a8a;
+  padding:2px 8px; border-radius:var(--pill)
+}
+
+/* Sections & grid */
+.section{
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:var(--radius); box-shadow:var(--shadow); padding:var(--s-6); margin:12px 0
+}
+.grid{display:grid; gap:var(--s-6); grid-template-columns:1fr 1fr}
+@media (max-width:1000px){.grid{grid-template-columns:1fr}}
+
+/* Cards */
+.card{
+  background:var(--panel2); border:1px solid var(--border);
+  border-radius:var(--radius-lg); display:flex; flex-direction:column; min-height:0;
+  box-shadow: var(--shadow);
+}
+.card-head{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 14px; border-bottom:1px solid var(--border); background:var(--panel);
+}
+.card-title{margin:0; font-size:15px}
+.card-sub{font-size:12px; color:var(--muted)}
+.card-controls{
+  display:flex; gap:8px; flex-wrap:wrap; padding:10px 14px; border-bottom:1px solid var(--border); background:var(--panel2)
+}
+.chart-cards{display:grid; grid-template-columns:1fr; gap:10px; padding:10px 14px}
+.chart-card{border:1px solid var(--border); border-radius:12px; padding:8px; background:var(--panel)}
+.chart-head{display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:6px}
+
+/* Charts */
+.chart-box{height:260px; position:relative; overflow:auto}
+.chart-box canvas{display:block; height:100% !important; min-width:100%}
+
+/* Tables */
+.table-wrap{padding:12px 14px}
+table{
+  width:100%; border-collapse:collapse; background:var(--panel); table-layout:fixed;
+  box-shadow: 0 1px 2px rgba(15,23,42,.04);
+}
+th,td{
+  border-bottom:1px solid var(--border); padding:6px 8px;
+  white-space:nowrap; max-width:280px; overflow:hidden; text-overflow:ellipsis;
+}
+th{
+  position:sticky; top:0;
+  background:#f1f5f9; /* light slate */
+  cursor:pointer; z-index:2;
+}
+th .sort{opacity:.7; margin-left:6px}
+tbody tr:nth-child(even){background:#f8fafc}
+
+tfoot td{
+  font-weight:600; background:#f1f5f9; position:sticky; bottom:0; z-index:1;
+}
+
+/* Sticky footer alternative */
+.table-sticky-foot{
+  position:sticky; bottom:0; background:#f1f5f9; border-top:1px solid var(--border);
+  padding:6px 8px; display:flex; justify-content:flex-end; gap:10px;
+}
+
+.card-foot{
+  display:flex; gap:8px; flex-wrap:wrap; padding:12px 14px; border-top:1px solid var(--border); background:var(--panel)
+}
+.small{font-size:12px}
+
+/* Data table controls */
+.table-controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0 10px}
+.pager{display:flex; gap:6px; align-items:center}
+.pager button{padding:6px 10px}
+.count{color:var(--muted)}
+.data-table-wrap{
+  border:1px solid var(--border); border-radius:12px; overflow:auto; max-height:520px;
+  position:relative; background:var(--panel);
+}
+.sticky{position:sticky; top:0; background:#f1f5f9; z-index:1}
+
+/* Modal */
+.modal{
+  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  background:rgba(15,23,42,.35); z-index:50;
+}
+.modal.open{display:flex}
+.modal-card{
+  width:min(960px,92vw); max-height:86vh; overflow:auto; background:var(--panel);
+  border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px;
+  transform:translateY(4px); opacity:0; transition:opacity .18s, transform .18s;
+}
+.modal.open .modal-card{transform:none; opacity:1}
+.modal-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px}
+.modal-head h3{margin:0}
+.role-table{width:100%; border-collapse:collapse}
+.role-table th,.role-table td{border-bottom:1px solid var(--border); padding:6px 8px}
+
+/* Toast */
+.toast{
+  position:fixed; right:16px; bottom:16px; background:#ffffff; border:1px solid var(--border);
+  color:var(--ink); padding:10px 12px; border-radius:10px; box-shadow:var(--shadow); z-index:60;
+  transform:translateY(6px); opacity:.98; transition:opacity .2s, transform .2s;
+}
+.toast.show{transform:none; opacity:1}
+
+/* Motion preferences */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important; transition:none !important}
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="section">
+    <h2 style="margin:2px 0 10px">CSV → Aggregates (Card UI) + Raw Data Table</h2>
+    <div class="bar">
+      <input id="file" type="file" accept=".csv,.txt" />
+      <button id="loadBtn">Load CSV</button>
+      <span id="meta" class="muted"></span>
+    </div>
+    <div class="bar" style="margin-top:8px">
+      <label>Delimiter:
+        <select id="delimiter">
+          <option value="auto">Auto</option>
+          <option value=",">Comma (,)</option>
+          <option value=";">Semicolon (;)</option>
+          <option value="\t">Tab (\t)</option>
+          <option value="|">Pipe (|)</option>
+        </select>
+      </label>
+      <label><input id="hasHeader" type="checkbox" checked /> First row has headers</label>
+
+      <label class="tag">
+        Mode:
+        <select id="mode">
+          <option value="auto" selected>Auto</option>
+          <option value="manual">Manual</option>
+        </select>
+      </label>
+      <button id="editRolesBtn" style="display:none">Edit column roles</button>
+      <button id="addAggBtn" style="display:none">Add aggregate</button>
+      <button id="clearManualBtn" style="display:none">Clear manual</button>
+      <button id="recalcBtn" style="display:none">Recalculate with roles</button>
+
+      <button id="autoBtn">Generate Cards</button>
+      <span class="tag">Up to 10 aggregates</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3 style="margin:2px 0 10px">Schema / Parser Info</h3>
+    <pre id="schema" class="muted" style="white-space:pre-wrap;margin:0"></pre>
+  </div>
+
+  <div class="section">
+    <h3 style="margin:2px 0 10px">Raw Data</h3>
+    <div class="table-controls">
+      <label>Search: <input id="searchInput" type="text" placeholder="type to filter across all columns" style="min-width:260px"></label>
+      <label>Rows per page:
+        <select id="rowsPerPage">
+          <option>10</option>
+          <option selected>25</option>
+          <option>50</option>
+          <option>100</option>
+        </select>
+      </label>
+      <div class="pager">
+        <button id="prevPage">Prev</button>
+        <span class="count" id="pageInfo">Page 1 / 1</span>
+        <button id="nextPage">Next</button>
+      </div>
+      <span class="count" id="rowInfo">Showing 0–0 of 0</span>
+      <button id="downloadFiltered">Download filtered CSV</button>
+    </div>
+    <div class="data-table-wrap">
+      <table id="dataTable">
+        <thead id="dataThead"></thead>
+        <tbody id="dataTbody"></tbody>
+        <tfoot id="dataTFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3 style="margin:2px 0 10px">Aggregates</h3>
+    <div id="results" class="grid"></div>
+  </div>
+</div>
+
+<!-- Role Editor Modal -->
+<div id="roleModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Column Roles</h3>
+      <button id="closeRoleModal" aria-label="Close">Close</button>
+    </div>
+    <table class="role-table">
+      <thead><tr><th>Column</th><th>Detected Type</th><th>Unique</th><th>Role</th><th>Sample</th></tr></thead>
+      <tbody id="roleTBody"></tbody>
+    </table>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button id="saveRoles">Save roles</button>
+      <span class="muted small">Roles: <b>dimension</b> (group by), <b>metric</b> (numeric measure), <b>date</b>, <b>id</b> (skip in sums), <b>ignore</b></span>
+    </div>
+  </div>
+</div>
+
+<!-- Add Aggregate Modal -->
+<div id="aggModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Add Aggregate</h3>
+      <button id="closeAggModal" aria-label="Close">Close</button>
+    </div>
+    <div class="bar">
+      <label>Group by:
+        <select id="aggGroupBy"></select>
+      </label>
+      <label>Date bucket:
+        <select id="aggBucket">
+          <option value="">(none)</option>
+          <option value="day">day</option>
+          <option value="week">week</option>
+          <option value="month">month</option>
+          <option value="quarter">quarter</option>
+          <option value="year">year</option>
+        </select>
+      </label>
+      <label>Metric:
+        <select id="aggMetric"></select>
+      </label>
+      <label>Function:
+        <select id="aggFunc">
+          <option value="sum">sum</option>
+          <option value="avg">avg</option>
+          <option value="min">min</option>
+          <option value="max">max</option>
+          <option value="count">count</option>
+          <option value="distinct_count">distinct_count</option>
+        </select>
+      </label>
+    </div>
+    <div class="bar" style="margin-top:8px">
+      <label>Chart:
+        <select id="aggChart">
+          <option value="auto">Auto</option>
+          <option value="bar">Bar (vertical)</option>
+          <option value="hbar">Bar (horizontal)</option>
+          <option value="line">Line</option>
+          <option value="area">Area</option>
+          <option value="pie">Pie</option>
+          <option value="doughnut">Doughnut</option>
+          <option value="polarArea">Polar Area</option>
+          <option value="radar">Radar</option>
+        </select>
+      </label>
+      <label>Top-N:
+        <input id="aggTopN" type="number" min="3" max="999" value="20" style="width:90px" />
+      </label>
+      <button id="addAggConfirm">Add</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" style="display:none"></div>
+
+<script>
+/* ========= utils ========= */
+const $ = s => document.querySelector(s);
+const stripBOM = s => (s && s.charCodeAt(0) === 0xFEFF) ? s.slice(1) : s;
+function showToast(msg, ms=2000){ const t=$('#toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>{t.style.display='none'}, ms); }
+
+// Number parsing: handle commas, dots, percents, spaces
+function toNumLocale(v){
+  let s = String(v ?? '').trim();
+  if (!s) return NaN;
+  const pct = /%$/.test(s);
+  s = s.replace(/\s/g,'');
+  // Detect European style 1.234,56 vs US 1,234.56
+  const hasComma = s.includes(',');
+  const hasDot = s.includes('.');
+  if (hasComma && hasDot){
+    // assume the last separator is decimal
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')){
+      s = s.replace(/\./g,'').replace(/,/g,'.');
+    } else {
+      s = s.replace(/,/g,'');
+    }
+  } else if (hasComma && !hasDot){
+    // likely decimal comma
+    s = s.replace(/,/g,'.');
+  } else {
+    // plain or US style, remove thousands commas
+    s = s.replace(/,/g,'');
+  }
+  s = s.replace(/%$/,'');
+  const n = Number(s);
+  if (!isFinite(n)) return NaN;
+  return pct ? n/100 : n;
+}
+const isNum = v => { const n = toNumLocale(v); return !Number.isNaN(n) && isFinite(n); };
+const toNum = v => toNumLocale(v);
+const nice = n => { if (n==null || isNaN(n)) return ''; const a=Math.abs(n);
+  if (a>=1e9) return (n/1e9).toFixed(1)+'B';
+  if (a>=1e6) return (n/1e6).toFixed(1)+'M';
+  if (a>=1e3) return (n/1e3).toFixed(1)+'K';
+  return String(Number((+n).toFixed(2)));
+};
+function debounce(fn, ms=250){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); }; }
+
+/* ========= safer date parsing ========= */
+function parseDateSafe(v){
+  if (!v) return NaN;
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return Date.parse(s + 'T00:00:00Z');
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
+  if (m) return Date.UTC(+m[3], +m[2]-1, +m[1]);
+  const u = Date.parse(s);
+  return isNaN(u) ? NaN : u; // leave as-is for other variants
+}
+
+/* ========= state ========= */
+let ROWS=null, PROFILE=null, LAST_PARSE_META=null;
+let DATA_COLUMNS=[], FILTERED_ROWS=[], PAGE=1, RPP=25, QUERY="";
+let SORT = { col:null, dir:'asc' };
+
+let MODE = 'auto';
+let MANUAL_ROLES = {};   // { colName: 'dimension'|'metric'|'date'|'id'|'ignore' }
+let MANUAL_JOBS  = [];   // [{groupBy, metric, agg, chart, topN, dateBucket?}]
+
+/* ========= persistence ========= */
+function signatureFromHeaders(){
+  if (!DATA_COLUMNS.length) return '';
+  return DATA_COLUMNS.join('|') + '::' + (ROWS?ROWS.length:0);
+}
+const STORAGE_KEY = 'csv-agg-state-v2';
+function saveState(){
+  try{
+    const key = signatureFromHeaders();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ MODE, MANUAL_ROLES, MANUAL_JOBS, key }));
+  }catch{}
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.key && s.key === signatureFromHeaders()){
+      MODE = s.MODE || MODE; MANUAL_ROLES = s.MANUAL_ROLES || {}; MANUAL_JOBS = s.MANUAL_JOBS || [];
+      $('#mode').value = MODE; switchMode(MODE);
+    }
+  }catch{}
+}
+['change','click','input'].forEach(ev=>{ document.addEventListener(ev, debounce(saveState, 300), true); });
+
+/* ========= parsing with smart delimiter + worker + progress ========= */
+async function sniffText(file, bytes=256*1024){ const blob = await file.slice(0, bytes).text(); return stripBOM(blob || ''); }
+function tryParsePreview(text, opt){
+  return Papa.parse(text, { header: !!opt.header, preview: 25, skipEmptyLines: 'greedy', delimiter: opt.delimiter ?? "", quoteChar: '"', escapeChar: '"' });
+}
+function scorePreview(res){ const rows = res.data || []; const lens = rows.map(r => Array.isArray(r) ? r.length : (typeof r==='object' ? Object.keys(r).length : 0)); const modal = lens.length ? mode(lens) : 0; const err = (res.errors || []).length; return { modalCols: modal, errors: err }; }
+function mode(arr){ const m=new Map(); let best=0, v=0; for(const x of arr){const c=(m.get(x)||0)+1; m.set(x,c); if(c>best){best=c; v=x}} return v; }
+async function autoDetect(file, header=true){
+  const text = await sniffText(file);
+  const candidates = [",",";","\t","|"];
+  let best = { delimiter:",", score:{modalCols:0, errors:Infinity} };
+  for (const d of candidates){
+    const res = tryParsePreview(text, { delimiter:d, header });
+    const s = scorePreview(res);
+    const better = (s.modalCols > best.score.modalCols) || (s.modalCols===best.score.modalCols && s.errors < best.score.errors);
+    if (better) best = { delimiter:d, score:s };
+  }
+  return best;
+}
+async function parseCSV(file, delimiterChoice, header=true){
+  // Validate input file
+  if (!file || !file.size) {
+    throw new Error('No file selected or file is empty');
+  }
+  
+  let delimiter = ",";
+  if (delimiterChoice === 'auto'){
+    try {
+      const autod = await autoDetect(file, header);
+      delimiter = autod.delimiter;
+    } catch (err) {
+      console.warn('Auto-detection failed, using comma:', err);
+      delimiter = ",";
+    }
+  } else {
+    // accept either "\t" or actual tab character
+    delimiter = (delimiterChoice === '\t' || delimiterChoice === '	') ? '	' : delimiterChoice;
+  }
+  
+  $('#meta').textContent = `Parsing… (worker) delim="${delimiter}"`;
+  console.log('Starting parse with config:', { customWorker: true, header, delimiter, fileSize: file.size, fileName: file.name });
+  
+  return new Promise((resolve,reject)=>{
+    let rowCount = 0;
+    let hasCalledComplete = false;
+    let isUsingWorker = true; // Track if we're using worker mode
+    // Collect rows when using step() so we still return full data on complete
+    const collectedRows = [];
+    
+    // Set up a timeout to detect if parsing gets stuck
+    const timeout = setTimeout(() => {
+      if (!hasCalledComplete) {
+        console.error('Parse timeout - no response from parser (non-fatal, will rely on internal fallbacks)');
+        // Do not reject here; worker/onerror handler will manage fallback/termination.
+      }
+    }, 30000); // 30 second timeout
+    
+    const completeHandler = (results)=>{
+      if (hasCalledComplete) {
+        console.warn('Complete callback called multiple times, ignoring');
+        return;
+      }
+      hasCalledComplete = true;
+      clearTimeout(timeout);
+      
+      console.log('Parse complete callback received:', results, 'isUsingWorker:', isUsingWorker);
+      
+      try {
+        if (!results) {
+          console.error('Results is null/undefined');
+          
+          // If this was the worker mode and we haven't tried fallback yet, try non-worker mode
+          if (isUsingWorker) {
+            console.log('Worker returned undefined, trying non-worker fallback...');
+            hasCalledComplete = false; // Reset flag for retry
+            isUsingWorker = false; // Mark that we're now trying non-worker
+            
+            const fallbackConfig = { 
+              worker: false,
+              header,
+              skipEmptyLines:'greedy',
+              dynamicTyping:false,
+              delimiter,
+              quoteChar:'"',
+              escapeChar:'"',
+              step: (results)=>{
+                rowCount++;
+                // Accumulate streamed row from step() so complete can return full dataset
+                if (results && 'data' in results) collectedRows.push(results.data);
+                if ((rowCount % 1000)===0) $('#meta').textContent = `Parsing… ${rowCount.toLocaleString()} rows (fallback)`;
+              },
+              complete: completeHandler,
+              error: errorHandler
+            };
+            
+            try {
+              Papa.parse(file, fallbackConfig);
+              return; // Don't reject yet, wait for fallback
+            } catch (fallbackErr) {
+              console.error('Fallback parse failed to start:', fallbackErr);
+              reject(new Error('Both worker and non-worker parsing failed to start'));
+              return;
+            }
+          }
+          
+          reject(new Error('Parser returned no result - both worker and non-worker modes failed'));
+          return;
+        }
+        
+        if (typeof results !== 'object') {
+          console.error('Results is not an object:', typeof results, results);
+          reject(new Error('Parser returned invalid result type: ' + typeof results));
+          return;
+        }
+        
+        // Ensure we have valid data structure; when using step(), results.data is empty, so use collectedRows
+        let data = (results.data && Array.isArray(results.data)) ? results.data : [];
+        let meta = (results.meta && typeof results.meta === 'object') ? results.meta : {};
+        let errors = (results.errors && Array.isArray(results.errors)) ? results.errors : [];
+        if (!data.length && collectedRows.length) {
+          // collectedRows contains per-row objects/arrays from step()
+          data = collectedRows;
+        }
+        // Ensure delimiter is present in meta for later UI
+        if (!meta || typeof meta !== 'object') meta = {};
+        if (!('delimiter' in meta)) meta.delimiter = delimiter;
+        
+        console.log('Parsed data summary:', { dataRows: data.length, metaKeys: Object.keys(meta), errorCount: errors.length });
+        
+        LAST_PARSE_META = meta;
+        $('#meta').textContent = `Parsed ${data.length.toLocaleString()} rows`;
+        
+        // Check for parsing errors first
+        if (errors.length > 0) {
+          console.warn('Parse errors:', errors);
+          if (!data.length) {
+            reject(new Error(errors[0]?.message || 'Parse failed with errors'));
+            return;
+          }
+        }
+        
+        if (!data.length) {
+          reject(new Error('No rows parsed - check file format and delimiter'));
+          return;
+        }
+        
+        resolve({ data, meta, errors });
+      } catch (err) {
+        console.error('Error in complete callback:', err);
+        reject(new Error('Error processing parse results: ' + (err.message || err)));
+      }
+    };
+    
+    const errorHandler = (err, file, inputElem, reason)=>{
+      clearTimeout(timeout);
+      console.error('PapaParse error callback:', { err, file, inputElem, reason });
+      reject(err || new Error(reason || 'Unknown parse error'));
+    };
+
+    try {
+      // Prefer self-hosted worker to avoid cross-origin worker issues
+      const worker = new Worker('parser.worker.js');
+      isUsingWorker = true;
+      const workerTimeout = setTimeout(()=>{
+        console.error('Worker timeout - switching to non-worker fallback');
+        try{ worker.terminate(); }catch{}
+        // Start fallback
+        const fallbackConfig = {
+          worker: false,
+          header,
+          skipEmptyLines:'greedy',
+          dynamicTyping:false,
+          delimiter,
+          quoteChar:'"',
+          escapeChar:'"',
+          step: (results)=>{
+            rowCount++;
+            if (results && 'data' in results) collectedRows.push(results.data);
+            if ((rowCount % 1000)===0) $('#meta').textContent = `Parsing… ${rowCount.toLocaleString()} rows (fallback)`;
+          },
+          complete: completeHandler,
+          error: errorHandler
+        };
+        try{ Papa.parse(file, fallbackConfig); }catch(fallbackErr){
+          console.error('Fallback parse failed to start after worker timeout:', fallbackErr);
+          reject(new Error('Both worker and non-worker parsing failed to start'));
+        }
+      }, 30000);
+      
+      worker.onmessage = (e)=>{
+        clearTimeout(workerTimeout);
+        if (!e || !e.data){
+          console.warn('Worker sent empty message; falling back');
+          const fallbackConfig = {
+            worker: false,
+            header,
+            skipEmptyLines:'greedy',
+            dynamicTyping:false,
+            delimiter,
+            quoteChar:'"',
+            escapeChar:'"',
+            step: (results)=>{
+              rowCount++;
+              if (results && 'data' in results) collectedRows.push(results.data);
+              if ((rowCount % 1000)===0) $('#meta').textContent = `Parsing… ${rowCount.toLocaleString()} rows (fallback)`;
+            },
+            complete: completeHandler,
+            error: errorHandler
+          };
+          try{ Papa.parse(file, fallbackConfig); }catch(fallbackErr){
+            console.error('Fallback parse failed to start:', fallbackErr);
+            reject(new Error('Both worker and non-worker parsing failed to start'));
+          }
+          return;
+        }
+        const msg = e.data;
+        if (msg.error){
+          console.warn('Worker error:', msg.message);
+          const fallbackConfig = {
+            worker: false,
+            header,
+            skipEmptyLines:'greedy',
+            dynamicTyping:false,
+            delimiter,
+            quoteChar:'"',
+            escapeChar:'"',
+            step: (results)=>{
+              rowCount++;
+              if (results && 'data' in results) collectedRows.push(results.data);
+              if ((rowCount % 1000)===0) $('#meta').textContent = `Parsing… ${rowCount.toLocaleString()} rows (fallback)`;
+            },
+            complete: completeHandler,
+            error: errorHandler
+          };
+          try{ Papa.parse(file, fallbackConfig); }catch(fallbackErr){
+            console.error('Fallback parse failed to start:', fallbackErr);
+            reject(new Error('Both worker and non-worker parsing failed to start'));
+          }
+          return;
+        }
+        // Optional progress support if worker posts {progress}
+        if ('progress' in msg){
+          $('#meta').textContent = `Parsing… ${Number(msg.progress||0).toLocaleString()} rows (worker)`;
+          return;
+        }
+        // Normal completion path
+        try{
+          const results = { data: Array.isArray(msg.data)?msg.data:[], meta: msg.meta||{}, errors: Array.isArray(msg.errors)?msg.errors:[] };
+          completeHandler(results);
+        } finally {
+          try{ worker.terminate(); }catch{}
+        }
+      };
+      
+      worker.onerror = (err)=>{
+        clearTimeout(workerTimeout);
+        console.error('Worker onerror:', err?.message || err);
+        const fallbackConfig = {
+          worker: false,
+          header,
+          skipEmptyLines:'greedy',
+          dynamicTyping:false,
+          delimiter,
+          quoteChar:'"',
+          escapeChar:'"',
+          step: (results)=>{
+            rowCount++;
+            if (results && 'data' in results) collectedRows.push(results.data);
+            if ((rowCount % 1000)===0) $('#meta').textContent = `Parsing… ${rowCount.toLocaleString()} rows (fallback)`;
+          },
+          complete: completeHandler,
+          error: errorHandler
+        };
+        try{ Papa.parse(file, fallbackConfig); }catch(fallbackErr){
+          console.error('Fallback parse failed to start after worker error:', fallbackErr);
+          reject(new Error('Both worker and non-worker parsing failed to start'));
+        }
+      };
+      
+      const workerConfig = {
+        header,
+        skipEmptyLines:'greedy',
+        dynamicTyping:false,
+        delimiter,
+        quoteChar:'"',
+        escapeChar:'"'
+      };
+      worker.postMessage({ file, config: workerConfig });
+    } catch (err) {
+      clearTimeout(timeout);
+      console.error('Error starting custom worker:', err);
+      const fallbackConfig = {
+        worker: false,
+        header,
+        skipEmptyLines:'greedy',
+        dynamicTyping:false,
+        delimiter,
+        quoteChar:'"',
+        escapeChar:'"',
+        step: (results)=>{
+          rowCount++;
+          if (results && 'data' in results) collectedRows.push(results.data);
+          if ((rowCount % 1000)===0) $('#meta').textContent = `Parsing… ${rowCount.toLocaleString()} rows (fallback)`;
+        },
+        complete: completeHandler,
+        error: errorHandler
+      };
+      try{ Papa.parse(file, fallbackConfig); }catch(fallbackErr){
+        console.error('Fallback parse failed to start after worker constructor error:', fallbackErr);
+        reject(new Error('Both worker and non-worker parsing failed to start'));
+      }
+    }
+  });
+}
+
+/* ========= profiling ========= */
+function inferType(v){
+  if (v==null || v==='') return 'empty';
+  if (isNum(v)) return 'number';
+  const t = parseDateSafe(v);
+  if (!Number.isNaN(t)) return 'date';
+  return 'string';
+}
+function profile(rows){
+  const cols = Object.keys(rows[0]||{});
+  const sample = rows.slice(0, Math.min(500, rows.length));
+  const out = cols.map(name=>{
+    const vals = sample.map(r=>r[name]);
+    const counts = {number:0,date:0,string:0};
+    for (const v of vals){ const t=inferType(v); counts[t]=(counts[t]||0)+1; }
+    const type = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
+    const uniq = new Set(vals.filter(x=>x!=null&&x!=='').map(String)).size;
+    const samples = vals.filter(x=>x!=null&&x!=='').slice(0,3).map(String);
+    return { name, type, unique: uniq, samples };
+  });
+  return { columns: out, rowCount: rows.length };
+}
+function renderProfile(p){
+  const lines = p.columns.map(c=>`${c.name} — ${c.type} · unique=${c.unique} · samples=[${c.samples.join(', ')}]`);
+  const meta = LAST_PARSE_META ? `\nmeta: delimiter="${LAST_PARSE_META.delimiter}" linebreak="${LAST_PARSE_META.linebreak}"` : '';
+  $('#schema').textContent = `rows=${p.rowCount}\n` + lines.join('\n') + meta;
+}
+
+/* ========= raw data table: header, sorting, filter, pagination, tfoot sums ========= */
+function isLikelyCodeColumn(name){ return /(code|id|sku|account|acct|phone|tel|zip|postal|nr|no|number)$/i.test(String(name).trim()); }
+function columnType(name){ const c = PROFILE?.columns?.find(x=>x.name===name); return c ? c.type : 'string'; }
+function buildRawHeader(columns){
+  const thead = $('#dataThead'); thead.innerHTML='';
+  const tr = document.createElement('tr');
+  columns.forEach(col=>{
+    const th=document.createElement('th'); th.className='sticky'; th.textContent=col;
+    const s = document.createElement('span'); s.className='sort'; s.textContent='';
+    th.appendChild(s);
+    th.addEventListener('click', ()=>{
+      if (SORT.col===col){ SORT.dir = (SORT.dir==='asc'?'desc':'asc'); }
+      else { SORT.col=col; SORT.dir='asc'; }
+      renderSortIndicators(); renderRawBody();
+    });
+    tr.appendChild(th);
+  });
+  thead.appendChild(tr);
+  renderSortIndicators();
+}
+function renderSortIndicators(){
+  const ths = Array.from($('#dataThead').querySelectorAll('th'));
+  ths.forEach(th=>{
+    const col = th.firstChild?.nodeValue || th.childNodes[0]?.textContent || '';
+    const span = th.querySelector('.sort');
+    if (!span) return;
+    if (SORT.col===col) span.textContent = SORT.dir==='asc' ? '↑' : '↓';
+    else span.textContent = '';
+  });
+}
+function applyFilter(){
+  const q = QUERY.trim().toLowerCase();
+  if (!q){ FILTERED_ROWS = ROWS; return; }
+  FILTERED_ROWS = ROWS.filter(row=>{
+    for (const c of DATA_COLUMNS){
+      const v = row[c];
+      if (v!=null && String(v).toLowerCase().includes(q)) return true;
+    }
+    return false;
+  });
+}
+function sortRows(rows){
+  if (!SORT.col) return rows;
+  const name = SORT.col;
+  const t = columnType(name);
+  const dir = SORT.dir==='asc' ? 1 : -1;
+  const cmp = (a,b)=>{
+    const av = a[name], bv = b[name];
+    if (t==='number'){
+      const an = toNum(av), bn = toNum(bv);
+      if (isNaN(an) && isNaN(bn)) return 0; if (isNaN(an)) return -dir; if (isNaN(bn)) return dir;
+      return an < bn ? -dir : an > bn ? dir : 0;
+    } else if (t==='date'){
+      const an = parseDateSafe(av), bn = parseDateSafe(bv);
+      if (isNaN(an) && isNaN(bn)) return 0; if (isNaN(an)) return -dir; if (isNaN(bn)) return dir;
+      return an < bn ? -dir : an > bn ? dir : 0;
+    } else {
+      const as = (av==null?'':String(av)).toLowerCase();
+      const bs = (bv==null?'':String(bv)).toLowerCase();
+      return as < bs ? -dir : as > bs ? dir : 0;
+    }
+  };
+  return rows.map((r,i)=>({r,i})).sort((A,B)=> cmp(A.r,B.r) || (A.i - B.i)).map(A=>A.r);
+}
+function renderTFootSums(){
+  const tfoot = $('#dataTFoot'); tfoot.innerHTML='';
+  if (!FILTERED_ROWS?.length){ return; }
+  const tr = document.createElement('tr');
+  DATA_COLUMNS.forEach(col=>{
+    const td = document.createElement('td');
+    const t = columnType(col);
+    if (t==='number' && !isLikelyCodeColumn(col)){
+      let sum = 0;
+      for (const r of FILTERED_ROWS){ const n = toNum(r[col]); if (!isNaN(n)) sum += n; }
+      td.textContent = 'Σ ' + nice(sum);
+    } else { td.textContent = ''; }
+    tr.appendChild(td);
+  });
+  tfoot.appendChild(tr);
+}
+function renderRawBody(){
+  const tbody = $('#dataTbody'); tbody.innerHTML='';
+  const total = FILTERED_ROWS.length, pages = Math.max(1, Math.ceil(total / RPP));
+  PAGE = Math.min(PAGE, pages);
+  const sorted = sortRows(FILTERED_ROWS);
+  const start = (PAGE-1)*RPP, end = Math.min(start+RPP, total);
+  for (let i=start;i<end;i++){
+    const r = sorted[i];
+    const tr = document.createElement('tr');
+    DATA_COLUMNS.forEach(c=>{
+      const td = document.createElement('td');
+      let v = r[c];
+      td.textContent = (v==null? '' : String(v));
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  }
+  $('#pageInfo').textContent = `Page ${PAGE} / ${pages}`;
+  $('#rowInfo').textContent = `Showing ${total? start+1:0}–${end} of ${total}${(ROWS && ROWS.length!==total) ? ` (filtered from ${ROWS.length})` : ''}`;
+  $('#prevPage').disabled = PAGE<=1;
+  $('#nextPage').disabled = PAGE>=pages;
+  renderTFootSums();
+}
+const onSearch = debounce(()=>{ QUERY = $('#searchInput').value; PAGE=1; applyFilter(); renderRawBody(); }, 200);
+
+/* ========= roles + auto plan (no-AI) ========= */
+const NAME_PATTERNS = {
+  metric: /(amount|total|qty|quantity|price|unit[_\s-]*price|revenue|sales|cost|profit|margin|rate|percent|%|tax|fee|金额|总额|数量|单价|价格|费|税)/i,
+  code: /(code|id|sku|account|acct|编号|编码|货号|料号|单号|订单号|客户号|编号$|代码$|no\.?$|number$)/i,
+  date: /(date|time|day|month|quarter|year|日期|时间|月份|季度|年份)/i
+};
+const CODE_LIKE_NUM = /(zip|postal|phone|tel|nid|ic|passport|order|invoice|po|so)$/i;
+
+function inferRole(col, profile, rows) {
+  const name = col.name || '';
+  const type = col.type;
+  const uniq = col.unique || 0;
+  const rowCount = profile.rowCount || Math.max(1, rows.length);
+  const uniqRatio = rowCount ? uniq / rowCount : 0;
+  const isCodeByName = NAME_PATTERNS.code.test(name);
+  const isDateByName = NAME_PATTERNS.date.test(name);
+  const isMetricByName = NAME_PATTERNS.metric.test(name);
+
+  if (type === 'date' || isDateByName) return { role: 'date' };
+  if (type === 'number') {
+    if (isMetricByName) return { role: 'metric:strong' };
+    if (isCodeByName || CODE_LIKE_NUM.test(name)) return { role: 'id' };
+    return { role: 'metric' };
+  }
+  if (type === 'string') {
+    if (isCodeByName) return { role: 'id' };
+    if (uniqRatio > 0.95) return { role: 'id' };
+    return { role: 'dimension' };
+  }
+  return { role: 'ignore' };
+}
+
+function pickPrimaryMetric(profile, rows) {
+  const numCols = profile.columns.filter(c => c.type === 'number');
+  const scored = numCols.map(c => {
+    const nameScore = NAME_PATTERNS.metric.test(c.name) ? 2 : 0;
+    const vals = rows.slice(0, 2000).map(r => toNum(r[c.name])).filter(Number.isFinite);
+    const mean = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+    const varc = vals.length ? vals.reduce((a,b)=>a+(b-mean)*(b-mean),0)/vals.length : 0;
+    return { col: c, score: nameScore + (isFinite(varc) ? Math.log10(1+varc) : 0) };
+  });
+  scored.sort((a,b)=>b.score-a.score);
+  return scored[0]?.col || numCols[0] || null;
+}
+
+function autoPlan(profile, rows) {
+  const roles = profile.columns.map(c => ({ col:c, ...inferRole(c, profile, rows) }));
+  const dims = roles.filter(x => x.role==='dimension').map(x => x.col);
+  const dates = roles.filter(x => x.role==='date').map(x => x.col);
+  const metricsStrong = roles.filter(x => x.role==='metric:strong').map(x => x.col);
+  const metrics = roles.filter(x => x.role==='metric' || x.role==='metric:strong').map(x => x.col);
+  const primary = metricsStrong[0] || pickPrimaryMetric(profile, rows);
+  const jobs = []; const charts = [];
+  if (dates.length && primary) {
+    jobs.push({ groupBy: dates[0].name, metric: primary.name, agg:'sum', dateBucket:autoBucket(rows, dates[0].name) });
+    charts.push({ useJob: jobs.length-1, preferredType:'line', title:`${primary.name} over ${dates[0].name}` });
+  }
+  dims.slice(0,3).forEach(d => {
+    if (primary) {
+      jobs.push({ groupBy:d.name, metric:primary.name, agg:'sum' });
+      charts.push({ useJob: jobs.length-1, preferredType: d.unique<=8 ? 'pie' : 'bar', title:`${primary.name} by ${d.name}` });
+      jobs.push({ groupBy:d.name, metric:primary.name, agg:'avg' });
+      charts.push({ useJob: jobs.length-1, preferredType:'hbar', title:`avg ${primary.name} by ${d.name}` });
+    }
+    jobs.push({ groupBy:d.name, metric:null, agg:'count' });
+    charts.push({ useJob: jobs.length-1, preferredType: d.unique<=8 ? 'pie' : 'bar', title:`count by ${d.name}` });
+  });
+  const second = metrics.find(m => m.name !== primary?.name);
+  if (second && dims.length) {
+    jobs.push({ groupBy:dims[0].name, metric:second.name, agg:'sum' });
+    charts.push({ useJob: jobs.length-1, preferredType:'bar', title:`${second.name} by ${dims[0].name}` });
+  }
+  return { jobs: jobs.slice(0,10), charts };
+}
+
+function autoBucket(rows, dateCol){
+  const ds = rows.map(r=>parseDateSafe(r[dateCol])).filter(x=>!Number.isNaN(x));
+  if (!ds.length) return '';
+  const spanDays = (Math.max(...ds)-Math.min(...ds))/86400000;
+  if (spanDays > 400) return 'month';
+  if (spanDays > 120) return 'week';
+  return 'day';
+}
+
+/* ========= aggregates ========= */
+function bucketDate(d, bucket){
+  const t = parseDateSafe(d); if (Number.isNaN(t)) return null;
+  const dt = new Date(t);
+  const y = dt.getUTCFullYear(), m = dt.getUTCMonth()+1, day = dt.getUTCDate();
+  if (bucket==='year') return `${y}`;
+  if (bucket==='quarter') return `${y}-Q${Math.floor((m-1)/3)+1}`;
+  if (bucket==='month') return `${y}-${String(m).padStart(2,'0')}`;
+  if (bucket==='week'){
+    const d2 = new Date(Date.UTC(y, dt.getUTCMonth(), day));
+    const dayNum = (d2.getUTCDay()+6)%7; d2.setUTCDate(d2.getUTCDate()-dayNum+3);
+    const firstThursday = new Date(Date.UTC(d2.getUTCFullYear(),0,4));
+    const week = 1 + Math.round(((d2 - firstThursday)/86400000 - 3 + ((firstThursday.getUTCDay()+6)%7))/7);
+    return `${d2.getUTCFullYear()}-W${String(week).padStart(2,'0')}`;
+  }
+  return `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`; // day
+}
+
+function groupAgg(rows, groupBy, metric, agg, dateBucket=''){
+  const m = new Map();
+  const isDateCol = columnType(groupBy)==='date';
+  for (const r of rows){
+    let g = r[groupBy];
+    if (isDateCol && dateBucket){ const b = bucketDate(g, dateBucket); if (b==null) continue; g = b; }
+    const key = (g==null || g==='') ? '(blank)' : String(g);
+    if (agg==='count'){
+      m.set(key, (m.get(key)||0) + 1);
+    } else {
+      const v = toNum(r[metric]);
+      if (isFinite(v)){
+        if (!m.has(key)) m.set(key, []);
+        m.get(key).push(v);
+      }
+    }
+  }
+  const out = [];
+  for (const [k, arr] of m){
+    let val = 0;
+    if (agg==='count') val = arr;
+    else if (!arr.length) continue;
+    else if (agg==='sum') val = arr.reduce((a,b)=>a+b,0);
+    else if (agg==='avg') val = arr.reduce((a,b)=>a+b,0)/arr.length;
+    else if (agg==='min') val = Math.min(...arr);
+    else if (agg==='max') val = Math.max(...arr);
+    else if (agg==='distinct_count') val = new Set(arr).size;
+    out.push([k, val]);
+  }
+  if (isDateCol && dateBucket){
+    // Chronological order for date buckets (labels are zero-padded so lexicographic works)
+    out.sort((a,b)=> {
+      const ak = String(a[0] ?? '');
+      const bk = String(b[0] ?? '');
+      return ak < bk ? -1 : ak > bk ? 1 : 0;
+    });
+  } else {
+    // Default: sort by metric descending
+    out.sort((a,b)=> (Number(b[1]||0) - Number(a[1]||0)));
+  }
+  return { header:[isDateCol && dateBucket ? `${groupBy} (${dateBucket})` : groupBy, `${agg}(${metric||'*'})`], rows: out };
+}
+
+/* ========= charting (FIXED HEIGHT + SAFE REDRAW + MORE TYPES) ========= */
+const chartRegistry = new WeakMap(); // canvas -> { chart, ro }
+function computeChartConfig(agg, typePref, topN){
+  const total = agg.rows.length;
+
+  // Determine type first
+  let type='bar', indexAxis='x', fill=false;
+  if (typePref==='hbar'){ type='bar'; indexAxis='y'; }
+  else if (typePref==='line'){ type='line'; }
+  else if (typePref==='area'){ type='line'; fill=true; }
+  else if (['pie','doughnut','polarArea','radar'].includes(typePref)){ type=typePref; }
+  else if (typePref==='auto'){ type = (total<=8 ? 'pie' : 'bar'); }
+
+  const isCircular = (type==='pie' || type==='doughnut' || type==='polarArea' || type==='radar');
+
+  // Only group into "Other" for circular charts; bar/line show all points (scrollable)
+  let rows=[...agg.rows];
+  if (isCircular && typeof topN==='number' && rows.length>topN){
+    const head=rows.slice(0,topN);
+    const other=rows.slice(topN).reduce((a,b)=>a+(+b[1]||0),0);
+    rows=other?[...head,['Other',other]]:head;
+  }
+
+  const labels=rows.map(r=>String(r[0]));
+  const values=rows.map(r=>Number(r[1])||0);
+
+  return {
+    type,
+    data:{ labels, datasets:[{ label: agg.header[1], data: values, fill, tension:0.25 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      indexAxis,
+      plugins:{
+        legend:{ display: isCircular || labels.length<=20 },
+        tooltip:{ callbacks:{ label: ctx => { const v = ctx.parsed?.y ?? ctx.parsed ?? ctx.raw; return `${ctx.dataset.label}: ${nice(v)}`; }}}
+      },
+      scales: isCircular ? {} : { x:{ ticks:{ autoSkip:true, maxRotation:0 } }, y:{ beginAtZero:true, ticks:{ callback:v=>nice(v) } } }
+    }
+  };
+}
+function ensureChart(canvas, cfg){
+  const rec = chartRegistry.get(canvas);
+  if (rec){ try{ rec.chart.destroy(); }catch{} if (rec.ro){ try{ rec.ro.disconnect(); }catch{} } chartRegistry.delete(canvas); }
+  const chart = new Chart(canvas.getContext('2d'), cfg);
+  const ro = new ResizeObserver(()=>{ if (chart) chart.resize(); });
+  const parent = canvas.parentElement; if (parent) ro.observe(parent);
+  chartRegistry.set(canvas, { chart, ro });
+  return chart;
+}
+function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=20, titleForFile='chart'){
+  const c = document.createElement('div'); c.className='chart-card';
+  const head = document.createElement('div'); head.className='chart-head';
+  const left = document.createElement('div'); left.className='small muted'; left.textContent = `Chart for: ${agg.header[1]} by ${agg.header[0]}`;
+  const right = document.createElement('div'); right.style.display='flex'; right.style.gap='8px'; right.style.flexWrap='wrap';
+  const typeSel = document.createElement('select');
+  typeSel.innerHTML = `
+    <option value="auto">Auto</option>
+    <option value="bar">Bar (vertical)</option>
+    <option value="hbar">Bar (horizontal)</option>
+    <option value="line">Line</option>
+    <option value="area">Area</option>
+    <option value="pie">Pie</option>
+    <option value="doughnut">Doughnut</option>
+    <option value="polarArea">Polar Area</option>
+    <option value="radar">Radar</option>`;
+  typeSel.value = defaultType;
+  const topNInput = document.createElement('input'); topNInput.type='number'; topNInput.min='3'; topNInput.max='999'; topNInput.value=String(defaultTopN);
+  const redrawBtn = document.createElement('button'); redrawBtn.textContent='Redraw';
+  const pngBtn = document.createElement('button'); pngBtn.textContent='Download PNG';
+  right.append(typeSel, topNInput, redrawBtn, pngBtn);
+  head.append(left, right);
+  c.appendChild(head);
+  const box = document.createElement('div'); box.className='chart-box';
+  const canvas = document.createElement('canvas'); box.appendChild(canvas); c.appendChild(box); chartsContainer.appendChild(c);
+  function draw(){
+    const topN = Number(topNInput.value)||20;
+    const cfg = computeChartConfig(agg, typeSel.value, topN);
+    const isCircular = (cfg.type==='pie' || cfg.type==='doughnut' || cfg.type==='polarArea' || cfg.type==='radar');
+
+    // Reset previous overrides
+    canvas.style.width = '';
+    canvas.style.removeProperty('height');
+
+    // Horizontal scroll for vertical charts (indexAxis !== 'y')
+    if (!isCircular && (cfg.options?.indexAxis!=='y')){
+      const labelsCount = (cfg.data?.labels?.length)||0;
+      const pxPer = (cfg.type==='line' || cfg.type==='area') ? 40 : 60;
+      const minW = 600;
+      const w = Math.max(minW, labelsCount * pxPer);
+      canvas.style.width = w + 'px';
+    }
+
+    // Vertical scroll for horizontal bar charts (indexAxis === 'y')
+    if (!isCircular && (cfg.options?.indexAxis==='y')){
+      const labelsCount = (cfg.data?.labels?.length)||0;
+      const pxPer = 34; // per bar row
+      const minH = 260;
+      const h = Math.max(minH, labelsCount * pxPer);
+      // Override stylesheet's height:100% !important
+      canvas.style.setProperty('height', h + 'px', 'important');
+    }
+
+    ensureChart(canvas, cfg);
+  }
+  redrawBtn.onclick = draw; pngBtn.onclick = ()=>{ const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download = `${titleForFile}.png`; a.click(); };
+  draw();
+  return c;
+}
+
+/* ========= aggregate table (sortable + download) ========= */
+function renderAggTable(agg, container, previewN=20){
+  container.innerHTML = '';
+  const table=document.createElement('table');
+  const thead=document.createElement('thead'), trh=document.createElement('tr');
+  const headerSortSpans=[];
+  agg.header.forEach((h,i)=>{
+    const th=document.createElement('th'); th.textContent=h;
+    const s=document.createElement('span'); s.className='sort'; s.textContent='';
+    th.appendChild(s); headerSortSpans[i]=s;
+    th.style.cursor='pointer';
+    th.addEventListener('click', ()=>{
+      if (sortIdx===i){ sortDir = (sortDir==='asc'?'desc':'asc'); }
+      else { sortIdx=i; sortDir = i===0 ? 'asc' : 'desc'; }
+      fill(); updateIndicators();
+    });
+    trh.appendChild(th);
+  });
+  thead.appendChild(trh); table.appendChild(thead);
+  const tbody=document.createElement('tbody'); table.appendChild(tbody);
+  container.appendChild(table);
+  let showAll=false;
+  let sortIdx = /\((day|week|month|quarter|year)\)/i.test(agg.header[0]||'') ? 0 : 1;
+  let sortDir = sortIdx===0 ? 'asc' : 'desc';
+  function updateIndicators(){
+    headerSortSpans.forEach((s,i)=>{ s.textContent = (i===sortIdx) ? (sortDir==='asc'?'↑':'↓') : ''; });
+  }
+  function fill(){
+    tbody.innerHTML='';
+    let rows = [...agg.rows];
+    rows.sort((a,b)=>{
+      if (sortIdx===1){
+        const av=Number(a[1])||0, bv=Number(b[1])||0;
+        return sortDir==='asc' ? (av - bv) : (bv - av);
+      } else {
+        const as=String(a[0]??'').toLowerCase(), bs=String(b[0]??'').toLowerCase();
+        const cmp = as<bs ? -1 : as>bs ? 1 : 0;
+        return sortDir==='asc' ? cmp : -cmp;
+      }
+    });
+    rows = showAll ? rows : rows.slice(0, previewN);
+    rows.forEach(r=>{ const tr=document.createElement('tr'); const td0=document.createElement('td'); td0.textContent=String(r[0]); const td1=document.createElement('td'); td1.textContent=nice(Number(r[1])||0); tr.append(td0,td1); tbody.appendChild(tr); });
+  }
+  fill(); updateIndicators();
+  const foot=document.createElement('div'); foot.className='card-foot';
+  const total = agg.rows.length;
+  const dl=document.createElement('button'); dl.textContent='Download CSV';
+  if (total > previewN){
+    const toggle=document.createElement('button'); toggle.textContent=`Show all (${total})`;
+    toggle.onclick=()=>{ showAll=!showAll; fill(); toggle.textContent=showAll?'Collapse':`Show all (${total})`; };
+    foot.append(toggle, dl);
+  } else {
+    const info=document.createElement('span'); info.className='muted small'; info.textContent=`All ${total} rows shown`;
+    foot.append(info, dl);
+  }
+  dl.onclick=()=>{ const csv=[agg.header, ...agg.rows].map(r=>r.map(s=>{ const z=String(s??''); return /[",\n]/.test(z)?`"${z.replace(/"/g,'""')}"`:z; }).join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${(agg.header[1]+' by '+agg.header[0]).replace(/\s+/g,'_')}.csv`; a.click(); URL.revokeObjectURL(a.href); };
+  container.appendChild(foot);
+}
+
+/* ========= Manual Mode: Role Editor + Add Aggregate ========= */
+function openRoleEditor(){
+  const modal = $('#roleModal'); const tb = $('#roleTBody'); tb.innerHTML='';
+  PROFILE.columns.forEach(c=>{
+    const tr=document.createElement('tr');
+    const roleAuto = inferRole(c, PROFILE, ROWS).role;
+    const current = MANUAL_ROLES[c.name] || roleAuto;
+    const tdName = document.createElement('td'); tdName.textContent = c.name;
+    const tdType = document.createElement('td'); tdType.textContent = c.type;
+    const tdUniq = document.createElement('td'); tdUniq.textContent = c.unique;
+    const tdRole = document.createElement('td');
+    const sel = document.createElement('select'); sel.setAttribute('data-col', c.name);
+    ['dimension','metric','date','id','ignore'].forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+    sel.value = current.replace('metric:strong','metric'); tdRole.appendChild(sel);
+    const tdSample = document.createElement('td'); tdSample.className='muted small'; tdSample.textContent = (c.samples||[]).join(' | ');
+    tr.append(tdName, tdType, tdUniq, tdRole, tdSample); tb.appendChild(tr);
+  });
+  modal.classList.add('open');
+  modal.focus();
+}
+$('#closeRoleModal').onclick = ()=> $('#roleModal').classList.remove('open');
+$('#saveRoles').onclick = ()=>{
+  MANUAL_ROLES = {};
+  $('#roleTBody').querySelectorAll('select').forEach(sel=>{ MANUAL_ROLES[ sel.getAttribute('data-col') ] = sel.value; });
+  $('#roleModal').classList.remove('open');
+  renderAggregates();
+};
+
+function planFromManualRoles(profile){
+  const getCols = (role)=> profile.columns.filter(c => (MANUAL_ROLES[c.name]||'')===role);
+  const dims = getCols('dimension');
+  const dates = getCols('date');
+  const metrics = getCols('metric');
+  const primary = metrics[0] || pickPrimaryMetric(profile, ROWS);
+  const jobs=[], charts=[];
+  if (dates.length && primary){
+    jobs.push({ groupBy: dates[0].name, metric: primary.name, agg:'sum', dateBucket:autoBucket(ROWS, dates[0].name) });
+    charts.push({ useJob: jobs.length-1, preferredType:'line', title:`${primary.name} over ${dates[0].name}` });
+  }
+  dims.slice(0,3).forEach(d=>{
+    if (primary){
+      jobs.push({ groupBy:d.name, metric:primary.name, agg:'sum' });
+      charts.push({ useJob: jobs.length-1, preferredType:d.unique<=8?'pie':'bar', title:`${primary.name} by ${d.name}` });
+      jobs.push({ groupBy:d.name, metric:primary.name, agg:'avg' });
+      charts.push({ useJob: jobs.length-1, preferredType:'hbar', title:`avg ${primary.name} by ${d.name}` });
+    }
+    jobs.push({ groupBy:d.name, metric:null, agg:'count' });
+    charts.push({ useJob: jobs.length-1, preferredType:d.unique<=8?'pie':'bar', title:`count by ${d.name}` });
+  });
+  return { jobs: jobs.slice(0,10), charts };
+}
+
+function openAddAgg(){
+  const modal = $('#aggModal');
+  const gb = $('#aggGroupBy'), mt = $('#aggMetric');
+  const bucket = $('#aggBucket'); gb.innerHTML=''; mt.innerHTML=''; bucket.value='';
+  const dims = MODE==='manual'
+    ? PROFILE.columns.filter(c => (MANUAL_ROLES[c.name]||'')==='dimension' || (MANUAL_ROLES[c.name]||'')==='date')
+    : PROFILE.columns.filter(c => ['string','date'].includes(c.type));
+  const nums = MODE==='manual'
+    ? PROFILE.columns.filter(c => (MANUAL_ROLES[c.name]||'')==='metric')
+    : PROFILE.columns.filter(c => c.type==='number');
+  dims.forEach(c=>{ const o=document.createElement('option'); o.value=c.name; o.textContent=c.name; gb.appendChild(o); });
+  nums.forEach(c=>{ const o=document.createElement('option'); o.value=c.name; o.textContent=c.name; mt.appendChild(o); });
+  modal.classList.add('open');
+}
+$('#closeAggModal').onclick = ()=> $('#aggModal').classList.remove('open');
+$('#addAggConfirm').onclick = ()=>{
+  const groupBy = $('#aggGroupBy').value;
+  const metric  = $('#aggMetric').value || null;
+  const agg     = $('#aggFunc').value;
+  const chart   = $('#aggChart').value;
+  const topN    = Math.max(3, Math.min(999, Number($('#aggTopN').value)||20));
+  const dateBucket = $('#aggBucket').value || '';
+  MANUAL_JOBS.push({ groupBy, metric, agg, chart, topN, dateBucket });
+  $('#aggModal').classList.remove('open');
+  renderAggregates();
+};
+
+/* ========= UI glue ========= */
+$('#loadBtn').onclick = async ()=>{
+  const f=$('#file').files[0]; if(!f) return alert('Choose a CSV first.');
+  $('#meta').textContent='Parsing…';
+  try{
+    const choice=$('#delimiter').value, header=$('#hasHeader').checked;
+    const {data, meta}=await parseCSV(f, choice, header);
+    if(!data.length) throw new Error('No rows detected (check delimiter/header).');
+    ROWS=data; DATA_COLUMNS = Object.keys(ROWS[0] || {});
+    PROFILE=profile(ROWS); renderProfile(PROFILE);
+    $('#meta').textContent=`Loaded ${PROFILE.rowCount.toLocaleString()} rows, ${PROFILE.columns.length} columns. (delimiter="${meta.delimiter}")`;
+    $('#results').innerHTML='';
+    buildRawHeader(DATA_COLUMNS);
+    QUERY = ''; $('#searchInput').value='';
+    SORT = { col:null, dir:'asc' };
+    RPP = Number($('#rowsPerPage').value)||25; PAGE=1;
+    applyFilter(); renderRawBody();
+    MANUAL_ROLES = {}; MANUAL_JOBS = [];
+    $('#mode').value='auto'; switchMode('auto');
+    loadState(); // restore per-header state if available
+  }catch(e){ console.error(e); alert('Parse error: '+(e?.message||e)); $('#meta').textContent='Parse failed.'; }
+};
+
+function switchMode(val){
+  MODE = val;
+  const manual = MODE==='manual';
+  $('#editRolesBtn').style.display = manual ? '' : 'none';
+  $('#addAggBtn').style.display   = manual ? '' : 'none';
+  $('#clearManualBtn').style.display = manual ? '' : 'none';
+  $('#recalcBtn').style.display = manual ? '' : 'none';
+}
+$('#mode').addEventListener('change', e=>{ switchMode(e.target.value); renderAggregates(); });
+$('#editRolesBtn').onclick = openRoleEditor;
+$('#addAggBtn').onclick = openAddAgg;
+$('#clearManualBtn').onclick = ()=>{ MANUAL_ROLES={}; MANUAL_JOBS=[]; renderAggregates(); };
+$('#recalcBtn').onclick = ()=>{ renderAggregates(); showToast('Recalculated with current roles'); };
+
+$('#searchInput').addEventListener('input', onSearch);
+$('#rowsPerPage').addEventListener('change', ()=>{ RPP = Number($('#rowsPerPage').value)||25; PAGE=1; renderRawBody(); });
+$('#prevPage').addEventListener('click', ()=>{ if(PAGE>1){ PAGE--; renderRawBody(); } });
+$('#nextPage').addEventListener('click', ()=>{ const pages=Math.max(1, Math.ceil(FILTERED_ROWS.length / RPP)); if(PAGE<pages){ PAGE++; renderRawBody(); } });
+$('#downloadFiltered').addEventListener('click', ()=>{
+  if (!FILTERED_ROWS?.length) return;
+  const esc = s => { const str = String(s ?? ''); return /[",\n]/.test(str) ? `"${str.replace(/"/g,'""')}"` : str; };
+  const header = DATA_COLUMNS.map(esc).join(',');
+  const sorted = sortRows(FILTERED_ROWS);
+  const body = sorted.map(r => DATA_COLUMNS.map(c => esc(r[c])).join(',')).join('\n');
+  const blob = new Blob([header+'\n'+body], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'filtered_rows.csv'; a.click(); URL.revokeObjectURL(a.href);
+  showToast('Filtered CSV downloaded');
+});
+
+$('#autoBtn').onclick = renderAggregates;
+
+function renderAggregates(){
+  if(!ROWS) return alert('Load a CSV first.');
+  let plan;
+  if (MODE==='manual'){
+    if (MANUAL_JOBS.length){ plan = { jobs: MANUAL_JOBS.slice(0,10), charts:[] }; }
+    else if (Object.keys(MANUAL_ROLES).length){ plan = planFromManualRoles(PROFILE); }
+    else { plan = autoPlan(PROFILE, ROWS); }
+  } else { plan = autoPlan(PROFILE, ROWS); }
+  const grid=$('#results'); grid.innerHTML='';
+  const aggregates = plan.jobs.map(j => groupAgg(ROWS, j.groupBy, j.metric, j.agg, j.dateBucket||''));
+  aggregates.forEach((agg, idx)=>{
+    const intent = plan.charts.find(c=>c.useJob===idx) || {};
+    const cfg = plan.jobs[idx] || {};
+    const title = intent.title || `${agg.header[1]} by ${agg.header[0]}`;
+    const card=document.createElement('div'); card.className='card';
+    const head=document.createElement('div'); head.className='card-head';
+    const left=document.createElement('div');
+    const h=document.createElement('h4'); h.className='card-title'; h.textContent=title;
+    const sub=document.createElement('div'); sub.className='card-sub'; sub.textContent=`${agg.rows.length} groups · ${agg.header[1]}`;
+    left.append(h, sub); head.append(left); card.appendChild(head);
+    const controls=document.createElement('div'); controls.className='card-controls';
+    const addChartBtn=document.createElement('button'); addChartBtn.textContent='Add Chart Card';
+    const typeSel=document.createElement('select');
+    typeSel.innerHTML=`
+      <option value="auto">Auto</option>
+      <option value="bar">Bar (vertical)</option>
+      <option value="hbar">Bar (horizontal)</option>
+      <option value="line">Line</option>
+      <option value="area">Area</option>
+      <option value="pie">Pie</option>
+      <option value="doughnut">Doughnut</option>
+      <option value="polarArea">Polar Area</option>
+      <option value="radar">Radar</option>`;
+    typeSel.value = intent.preferredType || cfg.chart || 'auto';
+    const topNInput=document.createElement('input'); topNInput.type='number'; topNInput.min='3'; topNInput.max='999'; topNInput.value=String(cfg.topN||20);
+    const hint=document.createElement('span'); hint.className='muted small'; hint.textContent='Type / Top-N for new chart';
+    controls.append(hint, typeSel, topNInput, addChartBtn); card.appendChild(controls);
+    const chartsContainer=document.createElement('div'); chartsContainer.className='chart-cards'; card.appendChild(chartsContainer);
+    renderChartCard(agg, chartsContainer, typeSel.value, Number(topNInput.value)||20, title.replace(/\s+/g,'_'));
+    addChartBtn.onclick = ()=>{ const t = typeSel.value; const n = Math.max(3, Math.min(999, Number(topNInput.value)||20)); renderChartCard(agg, chartsContainer, t, n, title.replace(/\s+/g,'_')); };
+    const tableBox=document.createElement('div'); tableBox.className='table-wrap'; card.appendChild(tableBox); renderAggTable(agg, tableBox, 20);
+    grid.appendChild(card);
+  });
+}
+
+/* ========= Modal accessibility: ESC & backdrop ========= */
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open')); }});
+['roleModal','aggModal'].forEach(id=>{ const m = document.getElementById(id); m?.addEventListener('click', (e)=>{ if (e.target===m) m.classList.remove('open'); }); });
+</script>
+</body>
+</html>
