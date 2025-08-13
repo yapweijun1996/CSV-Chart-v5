@@ -1241,62 +1241,270 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
 }
 
 /* ========= aggregate table (sortable + download) ========= */
-function renderAggTable(agg, container, previewN=20){
+function renderAggTable(agg, container, previewN=10){
   container.innerHTML = '';
-  const table=document.createElement('table');
-  const thead=document.createElement('thead'), trh=document.createElement('tr');
-  const headerSortSpans=[];
-  agg.header.forEach((h,i)=>{
-    const th=document.createElement('th'); th.textContent=h;
-    const s=document.createElement('span'); s.className='sort'; s.textContent='';
-    th.appendChild(s); headerSortSpans[i]=s;
-    th.style.cursor='pointer';
-    th.addEventListener('click', ()=>{
-      if (sortIdx===i){ sortDir = (sortDir==='asc'?'desc':'asc'); }
-      else { sortIdx=i; sortDir = i===0 ? 'asc' : 'desc'; }
-      fill(); updateIndicators();
+  
+  // State variables for this table
+  let currentPage = 1;
+  let rowsPerPage = previewN;
+  let searchQuery = '';
+  let sortIdx = /\((day|week|month|quarter|year)\)/i.test(agg.header[0]||'') ? 0 : 1;
+  let sortDir = sortIdx===0 ? 'asc' : 'desc';
+  let filteredRows = [...agg.rows];
+  
+  // Create table elements
+  const tableControls = document.createElement('div');
+  tableControls.className = 'table-controls';
+  
+  const tableWrap = document.createElement('div');
+  tableWrap.className = 'data-table-wrap';
+  
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const tbody = document.createElement('tbody');
+  const tfoot = document.createElement('tfoot');
+  
+  // Create search input
+  const searchLabel = document.createElement('label');
+  searchLabel.textContent = 'Search: ';
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.placeholder = 'Type to filter...';
+  searchInput.style.minWidth = '150px';
+  searchLabel.appendChild(searchInput);
+  
+  // Create rows per page selector
+  const rowsPerPageLabel = document.createElement('label');
+  rowsPerPageLabel.textContent = 'Rows per page: ';
+  const rowsPerPageSelect = document.createElement('select');
+  rowsPerPageSelect.innerHTML = `
+    <option value="10">10</option>
+    <option value="25">25</option>
+    <option value="50">50</option>
+    <option value="100">100</option>
+    <option value="0">All</option>
+  `;
+  rowsPerPageSelect.value = String(previewN);
+  rowsPerPageLabel.appendChild(rowsPerPageSelect);
+  
+  // Create pager
+  const pager = document.createElement('div');
+  pager.className = 'pager';
+  const prevButton = document.createElement('button');
+  prevButton.textContent = 'Prev';
+  const pageInfo = document.createElement('span');
+  pageInfo.className = 'count';
+  pageInfo.textContent = 'Page 1 / 1';
+  const nextButton = document.createElement('button');
+  nextButton.textContent = 'Next';
+  pager.append(prevButton, pageInfo, nextButton);
+  
+  tableControls.append(searchLabel, rowsPerPageLabel, pager);
+  container.appendChild(tableControls);
+  
+  // Create table header
+  const trh = document.createElement('tr');
+  const headerSortSpans = [];
+  agg.header.forEach((h, i) => {
+    const th = document.createElement('th');
+    th.textContent = h;
+    const s = document.createElement('span');
+    s.className = 'sort';
+    s.textContent = '';
+    th.appendChild(s);
+    headerSortSpans[i] = s;
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', () => {
+      if (sortIdx === i) {
+        sortDir = (sortDir === 'asc' ? 'desc' : 'asc');
+      } else {
+        sortIdx = i;
+        sortDir = i === 0 ? 'asc' : 'desc';
+      }
+      currentPage = 1;
+      updateTable();
     });
     trh.appendChild(th);
   });
-  thead.appendChild(trh); table.appendChild(thead);
-  const tbody=document.createElement('tbody'); table.appendChild(tbody);
-  container.appendChild(table);
-  let showAll=false;
-  let sortIdx = /\((day|week|month|quarter|year)\)/i.test(agg.header[0]||'') ? 0 : 1;
-  let sortDir = sortIdx===0 ? 'asc' : 'desc';
-  function updateIndicators(){
-    headerSortSpans.forEach((s,i)=>{ s.textContent = (i===sortIdx) ? (sortDir==='asc'?'↑':'↓') : ''; });
+  thead.appendChild(trh);
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  table.appendChild(tfoot);
+  tableWrap.appendChild(table);
+  container.appendChild(tableWrap);
+  
+  // Create footer with download button
+  const foot = document.createElement('div');
+  foot.className = 'card-foot';
+  const dl = document.createElement('button');
+  dl.textContent = 'Download CSV';
+  dl.onclick = () => {
+    const csv = [agg.header, ...agg.rows].map(r => r.map(s => {
+      const z = String(s ?? '');
+      return /[",\n]/.test(z) ? `"${z.replace(/"/g, '""')}"` : z;
+    }).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(agg.header[1] + ' by ' + agg.header[0]).replace(/\s+/g, '_')}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  foot.appendChild(dl);
+  container.appendChild(foot);
+  
+  // Update indicators function
+  function updateIndicators() {
+    headerSortSpans.forEach((s, i) => {
+      s.textContent = (i === sortIdx) ? (sortDir === 'asc' ? '↑' : '↓') : '';
+    });
   }
-  function fill(){
-    tbody.innerHTML='';
-    let rows = [...agg.rows];
-    rows.sort((a,b)=>{
-      if (sortIdx===1){
-        const av=Number(a[1])||0, bv=Number(b[1])||0;
-        return sortDir==='asc' ? (av - bv) : (bv - av);
+  
+  // Filter rows based on search query
+  function filterRows() {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) {
+      filteredRows = [...agg.rows];
+      return;
+    }
+    
+    filteredRows = agg.rows.filter(row => {
+      return row.some(cell => String(cell).toLowerCase().includes(query));
+    });
+  }
+  
+  // Sort rows
+  function sortRows() {
+    filteredRows.sort((a, b) => {
+      if (sortIdx === 1) {
+        const av = Number(a[1]) || 0;
+        const bv = Number(b[1]) || 0;
+        return sortDir === 'asc' ? (av - bv) : (bv - av);
       } else {
-        const as=String(a[0]??'').toLowerCase(), bs=String(b[0]??'').toLowerCase();
-        const cmp = as<bs ? -1 : as>bs ? 1 : 0;
-        return sortDir==='asc' ? cmp : -cmp;
+        const as = String(a[0] ?? '').toLowerCase();
+        const bs = String(b[0] ?? '').toLowerCase();
+        const cmp = as < bs ? -1 : as > bs ? 1 : 0;
+        return sortDir === 'asc' ? cmp : -cmp;
       }
     });
-    rows = showAll ? rows : rows.slice(0, previewN);
-    rows.forEach(r=>{ const tr=document.createElement('tr'); const td0=document.createElement('td'); td0.textContent=String(r[0]); const td1=document.createElement('td'); td1.textContent=nice(Number(r[1])||0); tr.append(td0,td1); tbody.appendChild(tr); });
   }
-  fill(); updateIndicators();
-  const foot=document.createElement('div'); foot.className='card-foot';
-  const total = agg.rows.length;
-  const dl=document.createElement('button'); dl.textContent='Download CSV';
-  if (total > previewN){
-    const toggle=document.createElement('button'); toggle.textContent=`Show all (${total})`;
-    toggle.onclick=()=>{ showAll=!showAll; fill(); toggle.textContent=showAll?'Collapse':`Show all (${total})`; };
-    foot.append(toggle, dl);
-  } else {
-    const info=document.createElement('span'); info.className='muted small'; info.textContent=`All ${total} rows shown`;
-    foot.append(info, dl);
+  
+  // Render table body
+  function renderTableBody() {
+    tbody.innerHTML = '';
+    
+    const totalFiltered = filteredRows.length;
+    const totalPages = rowsPerPage === 0 ? 1 : Math.ceil(totalFiltered / rowsPerPage);
+    
+    // Adjust current page if it's out of bounds
+    if (currentPage > totalPages && totalPages > 0) {
+      currentPage = totalPages;
+    }
+    
+    // Calculate start and end indices
+    let start, end;
+    if (rowsPerPage === 0) {
+      // Show all rows
+      start = 0;
+      end = totalFiltered;
+    } else {
+      // Show paginated rows
+      start = (currentPage - 1) * rowsPerPage;
+      end = Math.min(start + rowsPerPage, totalFiltered);
+    }
+    
+    // Get rows to display
+    const displayRows = filteredRows.slice(start, end);
+    
+    // Render rows
+    displayRows.forEach(r => {
+      const tr = document.createElement('tr');
+      const td0 = document.createElement('td');
+      td0.textContent = String(r[0]);
+      const td1 = document.createElement('td');
+      td1.textContent = nice(Number(r[1]) || 0);
+      tr.append(td0, td1);
+      tbody.appendChild(tr);
+    });
+    
+    // Update page info
+    if (totalFiltered === 0) {
+      pageInfo.textContent = 'No rows found';
+    } else if (rowsPerPage === 0) {
+      pageInfo.textContent = `Showing all ${totalFiltered} rows`;
+    } else {
+      pageInfo.textContent = `Page ${currentPage} / ${totalPages} (${totalFiltered} total)`;
+    }
+    
+    // Update button states
+    prevButton.disabled = currentPage <= 1;
+    nextButton.disabled = currentPage >= totalPages;
   }
-  dl.onclick=()=>{ const csv=[agg.header, ...agg.rows].map(r=>r.map(s=>{ const z=String(s??''); return /[",\n]/.test(z)?`"${z.replace(/"/g,'""')}"`:z; }).join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${(agg.header[1]+' by '+agg.header[0]).replace(/\s+/g,'_')}.csv`; a.click(); URL.revokeObjectURL(a.href); };
-  container.appendChild(foot);
+  
+  // Render table footer with sums
+  function renderTableFooter() {
+    tfoot.innerHTML = '';
+    const tr = document.createElement('tr');
+    
+    // Calculate sums only for numeric columns
+    agg.header.forEach((h, i) => {
+      const td = document.createElement('td');
+      if (i === 1) { // Assuming second column is numeric
+        let sum = 0;
+        for (const r of filteredRows) {
+          const val = Number(r[i]) || 0;
+          if (!isNaN(val)) sum += val;
+        }
+        td.textContent = 'Σ ' + nice(sum);
+      } else {
+        td.textContent = '';
+      }
+      tr.appendChild(td);
+    });
+    
+    tfoot.appendChild(tr);
+  }
+  
+  // Update entire table
+  function updateTable() {
+    filterRows();
+    sortRows();
+    renderTableBody();
+    renderTableFooter();
+    updateIndicators();
+  }
+  
+  // Event listeners
+  searchInput.addEventListener('input', debounce(() => {
+    searchQuery = searchInput.value;
+    currentPage = 1;
+    updateTable();
+  }, 300));
+  
+  rowsPerPageSelect.addEventListener('change', () => {
+    const val = rowsPerPageSelect.value;
+    rowsPerPage = val === '0' ? 0 : Number(val);
+    currentPage = 1;
+    updateTable();
+  });
+  
+  prevButton.addEventListener('click', () => {
+    if (currentPage > 1) {
+      currentPage--;
+      updateTable();
+    }
+  });
+  
+  nextButton.addEventListener('click', () => {
+    const totalPages = rowsPerPage === 0 ? 1 : Math.ceil(filteredRows.length / rowsPerPage);
+    if (currentPage < totalPages) {
+      currentPage++;
+      updateTable();
+    }
+  });
+  
+  // Initial render
+  updateTable();
 }
 
 /* ========= Manual Mode: Role Editor + Add Aggregate ========= */
