@@ -84,7 +84,7 @@ input:disabled, button:disabled{opacity:.6; cursor:not-allowed}
   background:var(--panel); border:1px solid var(--border);
   border-radius:var(--radius); box-shadow:var(--shadow); padding:var(--s-6); margin:12px 0
 }
-.grid{display:grid; gap:var(--s-6); grid-template-columns:1fr 1fr}
+.grid{display:grid; gap:var(--s-6); grid-template-columns:repeat(auto-fit, minmax(400px, 1fr)); max-width:1200px; margin:0 auto}
 @media (max-width:1000px){.grid{grid-template-columns:1fr}}
 
 /* Cards */
