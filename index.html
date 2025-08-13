@@ -333,6 +333,7 @@ tfoot td{
       </label>
       <label>Top-N:
         <input id="aggTopN" type="number" min="3" max="999" value="20" style="width:90px" />
+        <span class="muted small" style="display:block">Max items for pie/doughnut charts (3-999, default: 20)</span>
       </label>
       <button id="addAggConfirm">Add</button>
     </div>
@@ -1089,9 +1090,10 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
     <option value="radar">Radar</option>`;
   typeSel.value = defaultType;
   const topNInput = document.createElement('input'); topNInput.type='number'; topNInput.min='3'; topNInput.max='999'; topNInput.value=String(defaultTopN);
+  const topNHint = document.createElement('span'); topNHint.className='muted small'; topNHint.textContent='Top-N: Max items for pie/doughnut charts (3-999, default: 20)';
   const redrawBtn = document.createElement('button'); redrawBtn.textContent='Redraw';
   const pngBtn = document.createElement('button'); pngBtn.textContent='Download PNG';
-  right.append(typeSel, topNInput, redrawBtn, pngBtn);
+  right.append(typeSel, topNInput, topNHint, redrawBtn, pngBtn);
   head.append(left, right);
   c.appendChild(head);
   const box = document.createElement('div'); box.className='chart-box';
@@ -1359,7 +1361,7 @@ function renderAggregates(){
       <option value="radar">Radar</option>`;
     typeSel.value = intent.preferredType || cfg.chart || 'auto';
     const topNInput=document.createElement('input'); topNInput.type='number'; topNInput.min='3'; topNInput.max='999'; topNInput.value=String(cfg.topN||20);
-    const hint=document.createElement('span'); hint.className='muted small'; hint.textContent='Type / Top-N for new chart';
+    const hint=document.createElement('span'); hint.className='muted small'; hint.textContent='Top-N: Max items for pie/doughnut charts (3-999, default: 20)';
     controls.append(hint, typeSel, topNInput, addChartBtn); card.appendChild(controls);
     const chartsContainer=document.createElement('div'); chartsContainer.className='chart-cards'; card.appendChild(chartsContainer);
     renderChartCard(agg, chartsContainer, typeSel.value, Number(topNInput.value)||20, title.replace(/\s+/g,'_'));
