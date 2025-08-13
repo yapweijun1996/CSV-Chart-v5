@@ -1075,7 +1075,26 @@ if (Number.isFinite(limit) && limit>0 && rows.length>limit && (isCircular || typ
         // Enable point decimation for line/area to keep performance with many points
         decimation:{ enabled: (type==='line'), algorithm:'lttb' }
       },
-      scales: isCircular ? {} : { x:{ ticks:{ autoSkip:true, maxRotation:0 } }, y:{ beginAtZero:true, ticks:{ callback:v=>nice(v) } } }
+      scales: isCircular ? {} : {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            autoSkip: true,
+            maxRotation: 0,
+            callback: function(value) {
+              // Format numeric values on x-axis
+              return nice(value);
+            }
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            autoSkip: true,
+            maxRotation: 0
+          }
+        }
+      }
     }
   };
 }
