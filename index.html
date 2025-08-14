@@ -725,6 +725,9 @@ mark {
   border: 1px solid rgba(255, 193, 7, 0.3);
 }
 
+/* Screen-reader only */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
 </style>
 <style>
   /* Sidebar */
@@ -810,6 +813,11 @@ mark {
     border-color: var(--accent);
     background: color-mix(in oklab, var(--accent) 8%, transparent);
   }
+  .history-item { cursor: pointer; }
+  .history-item:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--accent) 80%, white 20%);
+    outline-offset: 2px;
+  }
   .history-item .name {
     font-weight: 600;
     font-size: var(--fs-1);
@@ -820,6 +828,16 @@ mark {
   }
   .sidebar.collapsed .history-item .name {
     display: none;
+  }
+  .sidebar.collapsed .history-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--s-4);
+  }
+  .sidebar.collapsed #history-list {
+    align-items: center;
   }
   .sidebar.collapsed .history-item::before {
     content: attr(data-tooltip);
@@ -839,8 +857,21 @@ mark {
     transition: opacity 0.2s 0.1s; /* Delay tooltip appearance */
     z-index: 1001;
   }
-  .sidebar.collapsed .history-item:hover::before {
+  .sidebar.collapsed .history-item:hover::before,
+  .sidebar.collapsed .history-item:focus::before,
+  .sidebar.collapsed .history-item:focus-visible::before,
+  .sidebar.collapsed .history-item:focus-within::before {
     opacity: 1;
+  }
+  .sidebar.collapsed .history-item::after {
+    content: '📄';
+    font-size: 18px;
+    line-height: 1;
+  }
+  .sidebar.collapsed .history-item.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 40%, transparent);
+    background: color-mix(in oklab, var(--accent) 8%, transparent);
   }
   .history-item .meta {
     font-size: 0.8rem;
@@ -882,16 +913,16 @@ mark {
 </style>
 </head>
 <body>
-<nav id="sidebar" class="sidebar">
+<nav id="sidebar" class="sidebar" aria-label="History sidebar">
   <div class="sidebar-header">
     <h3>History</h3>
-    <button id="sidebar-toggle" title="Toggle sidebar">☰</button>
-    <button id="manageHistoryBtn" title="Manage history" class="tooltip" data-tooltip="Manage history">⚙️</button>
+    <button id="sidebar-toggle" title="Toggle sidebar" aria-controls="sidebar" aria-expanded="true">☰</button>
+    <button id="manageHistoryBtn" title="Manage history" class="tooltip" data-tooltip="Manage history" aria-label="Manage history">⚙️</button>
   </div>
   <div class="sidebar-search">
     <input type="text" id="history-search" placeholder="Search reports..." />
   </div>
-  <ul id="history-list"></ul>
+  <ul id="history-list" role="listbox" aria-label="Saved reports"></ul>
 </nav>
 <main id="main-content" class="main-content">
 <div class="wrap">
@@ -1106,6 +1137,7 @@ mark {
 </div>
 
 <div id="toast-container" class="toast-container"></div>
+<div id="sr-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
 <script type="module">
 import * as Store from './store.js';
@@ -3403,9 +3435,54 @@ $('#saveAsNewBtn').onclick = () => {
 /* ========= History Sidebar ========= */
 const sidebar = $('#sidebar');
 const toggleBtn = $('#sidebar-toggle');
-toggleBtn.onclick = () => {
+// Accessibility: link button with sidebar and manage expanded state
+toggleBtn.setAttribute('aria-controls', 'sidebar');
+
+const SIDEBAR_COLLAPSE_KEY = 'csv-chart-v5:sidebar-collapsed';
+function updateSidebarToggleA11y(){
+  const expanded = !sidebar.classList.contains('collapsed');
+  toggleBtn.setAttribute('aria-expanded', String(expanded));
+  toggleBtn.setAttribute('aria-label', expanded ? 'Collapse sidebar' : 'Expand sidebar');
+  const announcer = document.getElementById('sr-announcer');
+  if (announcer) {
+    announcer.textContent = expanded ? 'Sidebar expanded' : 'Sidebar collapsed';
+  }
+}
+function applyStoredSidebarState(){
+  try {
+    const collapsed = localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+    sidebar.classList.toggle('collapsed', collapsed);
+  } catch {}
+  updateSidebarToggleA11y();
+}
+toggleBtn.addEventListener('click', () => {
+  const hadFocusInside = sidebar.contains(document.activeElement);
+  const prevFocus = document.activeElement;
+
   sidebar.classList.toggle('collapsed');
-};
+
+  try {
+    localStorage.setItem(SIDEBAR_COLLAPSE_KEY, sidebar.classList.contains('collapsed') ? '1' : '0');
+  } catch {}
+
+  updateSidebarToggleA11y();
+
+  if (hadFocusInside) {
+    requestAnimationFrame(() => {
+      try {
+        if (prevFocus && typeof prevFocus.focus === 'function' && document.contains(prevFocus)) {
+          prevFocus.focus();
+          return;
+        }
+      } catch {}
+      const list = document.getElementById('history-list');
+      const fallback = list?.querySelector('.history-item.active') || list?.querySelector('.history-item') || toggleBtn;
+      fallback?.focus();
+    });
+  }
+});
+// Initialize from storage on load
+applyStoredSidebarState();
 
 async function renderHistorySidebar() {
   const list = $('#history-list');
@@ -3431,8 +3508,17 @@ async function renderHistorySidebar() {
       li.className = 'history-item';
       li.setAttribute('data-id', item.id);
       li.setAttribute('data-tooltip', item.name || 'Untitled');
+      // a11y + keyboard: make entire item focusable and operable
+      li.setAttribute('tabindex', '0');
+      li.setAttribute('role', 'option');
+      li.setAttribute('aria-label', item.name || 'Untitled');
+      li.title = item.name || 'Untitled';
       if (item.id === window.currentHistoryId) {
         li.classList.add('active');
+        li.setAttribute('aria-current', 'true');
+        li.setAttribute('aria-selected', 'true');
+      } else {
+        li.removeAttribute('aria-selected');
       }
 
       const nameSpan = document.createElement('div');
@@ -3471,6 +3557,35 @@ async function renderHistorySidebar() {
       }
 
       actionsDiv.appendChild(loadBtn);
+      
+      // Click anywhere on the item to load (buttons stop propagation)
+      li.addEventListener('click', () => { loadHistoryState(item.id); });
+      // Keyboard support: Enter/Space to load; ArrowUp/Down/Home/End to navigate
+      li.addEventListener('keydown', (e) => {
+        const key = e.key;
+        if (key === 'Enter' || key === ' ') {
+          e.preventDefault();
+          loadHistoryState(item.id);
+          return;
+        }
+        const items = Array.from(list.querySelectorAll('.history-item'));
+        const i = items.indexOf(li);
+        if (key === 'ArrowDown') {
+          e.preventDefault();
+          const next = items[Math.min(items.length - 1, i + 1)];
+          next?.focus();
+        } else if (key === 'ArrowUp') {
+          e.preventDefault();
+          const prev = items[Math.max(0, i - 1)];
+          prev?.focus();
+        } else if (key === 'Home') {
+          e.preventDefault();
+          items[0]?.focus();
+        } else if (key === 'End') {
+          e.preventDefault();
+          items[items.length - 1]?.focus();
+        }
+      });
       
       li.append(nameSpan, metaDiv, actionsDiv);
       list.appendChild(li);
