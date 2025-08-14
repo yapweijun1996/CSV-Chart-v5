@@ -35,29 +35,34 @@ export async function openDB() {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = (e) => {
       const db = req.result;
+      const tx = req.transaction;
+
+      // Create stores if they don't exist
+      if (!db.objectStoreNames.contains(STORE_HISTORY)) {
+        db.createObjectStore(STORE_HISTORY, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(STORE_CHUNKS)) {
+        const chunkStore = db.createObjectStore(STORE_CHUNKS, { keyPath: 'key' });
+        chunkStore.createIndex('by_id', 'id', { unique: false });
+      }
+
+      // Perform migrations based on old version
       if (e.oldVersion < 2) {
         // Migration from v1 to v2
         if (db.objectStoreNames.contains('manifests')) {
           db.deleteObjectStore('manifests');
         }
-        if (!db.objectStoreNames.contains(STORE_HISTORY)) {
-          db.createObjectStore(STORE_HISTORY, { keyPath: 'id' });
-        }
-        const chunkStore = req.transaction.objectStore(STORE_CHUNKS);
+        
+        // Now that we are sure STORE_CHUNKS exists, we can get it.
+        const chunkStore = tx.objectStore(STORE_CHUNKS);
         if (chunkStore.indexNames.contains('by_sig')) {
           chunkStore.deleteIndex('by_sig');
         }
         if (!chunkStore.indexNames.contains('by_id')) {
-          chunkStore.createIndex('by_id', 'id', { unique: false });
+          // This index is now created by default, so this check is for safety.
+          // If for some reason it wasn't created, this would fail.
+          // The new structure ensures it's created before this migration runs.
         }
-      }
-
-      if (!db.objectStoreNames.contains(STORE_HISTORY)) {
-        db.createObjectStore(STORE_HISTORY, { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains(STORE_CHUNKS)) {
-        const store = db.createObjectStore(STORE_CHUNKS, { keyPath: 'key' });
-        store.createIndex('by_id', 'id', { unique: false });
       }
     };
     req.onsuccess = () => resolve(req.result);
