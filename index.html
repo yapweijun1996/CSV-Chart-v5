@@ -123,6 +123,67 @@ input:disabled, button:disabled{
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
+/* Tooltips */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+}
+
+.tooltip::before {
+  content: '?';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: var(--accent);
+  color: white;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: bold;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+  max-width: 300px;
+  white-space: normal;
+  text-align: left;
+}
+
+.tooltip:hover::after {
+  opacity: 1;
+}
+
+.tooltip-wide::after {
+  width: 200px;
+  white-space: normal;
+}
+
+.help-text {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
 /* Sections & grid */
 .section{
   background: var(--panel);
@@ -154,6 +215,9 @@ input:disabled, button:disabled{
   display: grid;
   gap: var(--s-6);
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-auto-rows: 10px;
+  /* Ensure items start at top of their grid area (better for masonry) */
+  align-items: start;
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 var(--s-2);
@@ -249,7 +313,7 @@ input:disabled, button:disabled{
 
 /* Charts */
 .chart-box {
-  height: 260px;
+  height: 320px;
   position: relative;
   overflow: auto;
   contain: strict;
@@ -354,13 +418,18 @@ input:disabled, button:disabled{
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .chart-box {
-    height: auto;
-    min-height: 200px;
-    max-height: 500px;
+    height: 280px;
   }
   
   .chart-card {
     overflow: auto;
+  }
+}
+
+/* Tablet responsiveness */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .chart-box {
+    height: 300px;
   }
 }
 
@@ -593,25 +662,53 @@ tfoot td{
 }
 
 /* Toast */
-.toast{
+.toast-container {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
-  background: linear-gradient(145deg, #ffffff, #f8f9fa);
-  border: 1px solid #e2e8f0;
-  color: var(--ink);
-  padding: 10px 12px;
-  border-radius: 10px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  z-index: 60;
-  transform: translateY(6px);
-  opacity: 0.98;
-  transition: opacity 0.2s, transform 0.2s;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-.toast.show{
-  transform: none;
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  color: var(--ink);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transform: translateX(calc(100% + 20px));
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s;
+  min-width: 280px;
+  max-width: 350px;
+}
+.toast.show {
+  transform: translateX(0);
   opacity: 1;
 }
+.toast.hide {
+  transform: translateX(calc(100% + 20px));
+  opacity: 0;
+}
+.toast-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+.toast-message {
+  flex-grow: 1;
+  font-size: 14px;
+}
+.toast.success { border-left: 4px solid #10b981; }
+.toast.error { border-left: 4px solid #f43f5e; }
+.toast.info { border-left: 4px solid #3b82f6; }
+.toast.success .toast-icon { color: #10b981; }
+.toast.error .toast-icon { color: #f43f5e; }
+.toast.info .toast-icon { color: #3b82f6; }
 
 /* Motion preferences */
 @media (prefers-reduced-motion: reduce){
@@ -619,25 +716,123 @@ tfoot td{
 }
 
 mark {
-  background-color: #fff080;
-  color: inherit;
-  padding: 0 2px;
-  border-radius: 2px;
+  background: linear-gradient(135deg, #ffeb3b, #fdd835);
+  color: #333;
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
 }
 
 </style>
+<style>
+  /* Sidebar */
+  body {
+    display: flex;
+  }
+  .sidebar {
+    width: 260px;
+    background: #eef2f9;
+    border-right: 1px solid var(--border);
+    padding: var(--s-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-4);
+    transition: width 0.3s ease, padding 0.3s ease;
+    overflow-y: auto;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+  }
+  .sidebar.collapsed {
+    width: 60px;
+    padding: var(--s-5) var(--s-2);
+  }
+  .sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .sidebar.collapsed .sidebar-header h3,
+  .sidebar.collapsed .history-item .details {
+    display: none;
+  }
+  #sidebar-toggle {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  #history-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+  }
+  .history-item {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    padding: var(--s-4);
+    cursor: pointer;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+  }
+  .history-item:hover {
+    background: color-mix(in oklab, var(--accent) 8%, transparent);
+  }
+  .history-item .icon {
+    font-size: 20px;
+  }
+  .history-item .details {
+    flex-grow: 1;
+  }
+  .history-item .name {
+    font-weight: 600;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .history-item .meta {
+    font-size: var(--fs-0);
+    color: var(--muted);
+  }
+  .main-content {
+    flex-grow: 1;
+    height: 100vh;
+    overflow-y: auto;
+  }
+</style>
 </head>
 <body>
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-header">
+    <h3>History</h3>
+    <button id="sidebar-toggle" title="Toggle sidebar">☰</button>
+    <button id="manageHistoryBtn" title="Manage history">⚙️</button>
+  </div>
+  <ul id="history-list"></ul>
+</nav>
+<main id="main-content" class="main-content">
 <div class="wrap">
   <div class="section">
     <h2 style="margin:2px 0 10px">CSV → Aggregates (Card UI) + Raw Data Table</h2>
     <div class="bar">
       <input id="file" type="file" accept=".csv,.txt" />
       <button id="loadBtn">Load CSV</button>
+      <button id="updateReportBtn" disabled>Update Report</button>
+      <button id="saveAsNewBtn" disabled>Save as New</button>
       <span id="meta" class="muted"></span>
     </div>
     <div class="bar" style="margin-top:8px">
       <label>Delimiter:
+        <span class="tooltip tooltip-wide" data-tooltip="Character that separates values in your CSV. Auto-detection usually works best. Override if parsing looks incorrect."></span>
         <select id="delimiter">
           <option value="auto">Auto</option>
           <option value=",">Comma (,)</option>
@@ -646,21 +841,35 @@ mark {
           <option value="|">Pipe (|)</option>
         </select>
       </label>
-      <label><input id="hasHeader" type="checkbox" checked /> First row has headers</label>
+      <label><input id="hasHeader" type="checkbox" checked /> First row has headers
+        <span class="tooltip tooltip-wide" data-tooltip="Check if your CSV's first row contains column names instead of data. Usually enabled for standard CSV files."></span>
+      </label>
 
       <label class="tag">
         Mode:
+        <span class="tooltip tooltip-wide" data-tooltip="Auto: Uses AI-like detection to automatically assign column roles and generate aggregates. Manual: Allows you to override column roles and add custom aggregates.">
+        </span>
         <select id="mode">
           <option value="auto" selected>Auto</option>
           <option value="manual">Manual</option>
         </select>
       </label>
-      <button id="editRolesBtn" style="display:none">Edit column roles</button>
-      <button id="addAggBtn" style="display:none">Add aggregate</button>
-      <button id="clearManualBtn" style="display:none">Clear manual</button>
-      <button id="recalcBtn" style="display:none">Recalculate with roles</button>
+      <button id="editRolesBtn" style="display:none">Edit column roles 
+        <span class="tooltip tooltip-wide" data-tooltip="Override automatic column role detection. Change how columns are classified: metric (numbers for calculation), dimension (categories for grouping), date, id, or ignore."></span>
+      </button>
+      <button id="addAggBtn" style="display:none">Add aggregate
+        <span class="tooltip" data-tooltip="Create custom aggregations by selecting specific groupBy and metric combinations."></span>
+      </button>
+      <button id="clearManualBtn" style="display:none">Clear manual
+        <span class="tooltip" data-tooltip="Reset all manual overrides and return to automatic mode."></span>
+      </button>
+      <button id="recalcBtn" style="display:none">Recalculate with roles
+        <span class="tooltip" data-tooltip="Regenerate aggregates using current role assignments."></span>
+      </button>
 
-      <button id="autoBtn">Generate Cards</button>
+      <button id="autoBtn">Generate Cards
+        <span class="tooltip tooltip-wide" data-tooltip="Automatically analyze your CSV data and create up to 10 interactive charts and data tables based on detected patterns and relationships."></span>
+      </button>
       <span class="tag">Up to 10 aggregates</span>
     </div>
   </div>
@@ -716,9 +925,16 @@ mark {
       <thead><tr><th>Column</th><th>Detected Type</th><th>Unique</th><th>Role</th><th>Sample</th></tr></thead>
       <tbody id="roleTBody"></tbody>
     </table>
-    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button id="saveRoles">Save roles</button>
-      <span class="muted small">Roles: <b>dimension</b> (group by), <b>metric</b> (numeric measure), <b>date</b>, <b>id</b> (skip in sums), <b>ignore</b></span>
+      <div class="help-text">
+        <strong>Role Definitions:</strong><br>
+        <b>metric</b> - Numeric columns for calculations (sum, avg, count)<br>
+        <b>dimension</b> - Categories for grouping (text with limited unique values)<br>
+        <b>date</b> - Time-based fields for time series analysis<br>
+        <b>id</b> - Unique identifiers (excluded from aggregations)<br>
+        <b>ignore</b> - Columns to exclude from all processing
+      </div>
     </div>
   </div>
 </div>
@@ -732,9 +948,11 @@ mark {
     </div>
     <div class="bar">
       <label>Group by:
+        <span class="tooltip" data-tooltip="Column to group data by (dimension or date columns)"></span>
         <select id="aggGroupBy"></select>
       </label>
       <label>Date bucket:
+        <span class="tooltip tooltip-wide" data-tooltip="For date columns, group dates into time periods. Leave empty for exact dates."></span>
         <select id="aggBucket">
           <option value="">(none)</option>
           <option value="day">day</option>
@@ -745,9 +963,11 @@ mark {
         </select>
       </label>
       <label>Metric:
+        <span class="tooltip" data-tooltip="Numeric column to aggregate (metric columns only)"></span>
         <select id="aggMetric"></select>
       </label>
       <label>Function:
+        <span class="tooltip tooltip-wide" data-tooltip="sum: Add all values | avg: Calculate average | count: Count non-null values | min/max: Find minimum/maximum values | distinct_count: Count unique values"></span>
         <select id="aggFunc">
           <option value="sum">sum</option>
           <option value="avg">avg</option>
@@ -760,6 +980,7 @@ mark {
     </div>
     <div class="bar" style="margin-top:8px">
       <label>Chart:
+        <span class="tooltip tooltip-wide" data-tooltip="Auto: System chooses best chart based on data. Bar: Good for categories. Line/Area: Best for time series. Pie/Doughnut: Good for proportions of a whole."></span>
         <select id="aggChart">
           <option value="auto">Auto</option>
           <option value="bar">Bar (vertical)</option>
@@ -773,21 +994,96 @@ mark {
         </select>
       </label>
       <label>Top-N:
+        <span class="tooltip tooltip-wide" data-tooltip="Limit pie/doughnut charts to top N categories by value. Remaining items grouped as 'Others'. Helps with readability when there are many small categories."></span>
         <input id="aggTopN" type="number" min="3" max="999" value="20" style="width:90px" />
         <span class="muted small" style="display:block">Max items for pie/doughnut charts (3-999, default: 20)</span>
       </label>
       <button id="addAggConfirm">Add</button>
     </div>
+    <div class="help-text">
+      <strong>Tips:</strong> 
+      • Use date columns with time buckets for time series analysis
+      • Combine categories (dimensions) with numeric metrics for comparison charts  
+      • Count function works with any column type for frequency analysis
+      • Try different chart types to find the best visualization for your data
+    </div>
   </div>
 </div>
 
-<div id="toast" class="toast" style="display:none"></div>
+<!-- History Management Modal -->
+<div id="historyModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Manage History</h3>
+      <button id="closeHistoryModal" aria-label="Close">Close</button>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; padding: 8px; border-bottom: 1px solid var(--border);">
+      <input type="checkbox" id="history-select-all" />
+      <label for="history-select-all">Select All</label>
+    </div>
+    <div id="history-management-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; padding-top: 8px;">
+      <!-- History items will be populated here -->
+    </div>
+    <div class="card-foot" style="justify-content: space-between;">
+      <button id="deleteSelectedBtn" disabled style="background: #fca5a5; color: #7f1d1d; border: 1px solid #f87171;">Delete Selected</button>
+      <button id="clearAllHistoryBtn" style="background: #ef4444; color: white; border: none;">Clear All History</button>
+    </div>
+  </div>
+</div>
 
-<script>
+<div id="toast-container" class="toast-container"></div>
+
+<script type="module">
+import * as Store from './store.js';
 /* ========= utils ========= */
 const $ = s => document.querySelector(s);
 const stripBOM = s => (s && s.charCodeAt(0) === 0xFEFF) ? s.slice(1) : s;
-function showToast(msg, ms=2000){ const t=$('#toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>{t.style.display='none'}, ms); }
+function showToast(message, type = 'info', duration = 3000) {
+  const container = $('#toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+
+  const icon = document.createElement('span');
+  icon.className = 'toast-icon';
+  if (type === 'success') icon.textContent = '✓';
+  else if (type === 'error') icon.textContent = '✗';
+  else icon.textContent = 'ℹ';
+
+  const msg = document.createElement('span');
+  msg.className = 'toast-message';
+  msg.textContent = message;
+
+  toast.append(icon, msg);
+  container.appendChild(toast);
+
+  // Animate in
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+
+  // Set timeout to remove
+  setTimeout(() => {
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+    toast.addEventListener('transitionend', () => {
+      try {
+        container.removeChild(toast);
+      } catch {}
+    }, { once: true });
+  }, duration);
+}
+
+function getFormattedDateTime() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
 
 // Number parsing: handle commas, dots, percents, spaces
 function toNumLocale(v){
@@ -827,13 +1123,35 @@ const nice = n => { if (n==null || isNaN(n)) return ''; const a=Math.abs(n);
 };
 function debounce(fn, ms=250){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); }; }
 
+// Debounced auto-save function
+const debouncedAutoSave = debounce(() => {
+  if (!window.currentHistoryId || !ROWS) return;
+  const currentName = $('#history-list .history-item[data-id="' + window.currentHistoryId + '"] .name')?.textContent || 'current report';
+  console.log(`Auto-saving changes to "${currentName}"...`);
+  saveCurrentStateToHistory(currentName, false); // false = update existing
+}, 1500);
+
 /* ========= safer date parsing ========= */
 function parseDateSafe(v){
   if (!v) return NaN;
   const s = String(v).trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return Date.parse(s + 'T00:00:00Z');
-  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
-  if (m) return Date.UTC(+m[3], +m[2]-1, +m[1]);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    // Parse ISO date format (YYYY-MM-DD) as UTC
+    const [, year, month, day] = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (year && month && day) {
+      return Date.UTC(+year, +month-1, +day);
+    }
+  }
+  // Handle DD/MM/YY or DD/MM/YYYY formats
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(s);
+  if (m) {
+    // For DD/MM/YY format, assume 20xx for years 00-49 and 19xx for years 50-99
+    let year = +m[3];
+    if (year < 100) {
+      year = year < 50 ? 2000 + year : 1900 + year;
+    }
+    return Date.UTC(year, +m[2]-1, +m[1]);
+  }
   const u = Date.parse(s);
   return isNaN(u) ? NaN : u; // leave as-is for other variants
 }
@@ -1300,13 +1618,35 @@ function renderRawBody(){
   PAGE = Math.min(PAGE, pages);
   const sorted = sortRows(FILTERED_ROWS);
   const start = (PAGE-1)*RPP, end = Math.min(start+RPP, total);
+  
+  // Function to highlight search terms in text
+  function highlightText(text, query) {
+    if (!query || !query.trim()) return text;
+    // Escape HTML in the text first to prevent XSS
+    const safeText = String(text).replace(/[&<>"']/g, function(m) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+    const escapedQuery = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    return safeText.replace(regex, '<mark>$1</mark>');
+  }
+  
   for (let i=start;i<end;i++){
     const r = sorted[i];
     const tr = document.createElement('tr');
     DATA_COLUMNS.forEach(c=>{
       const td = document.createElement('td');
       let v = r[c];
-      td.textContent = (v==null? '' : String(v));
+      const textValue = (v==null? '' : String(v));
+      
+      // Apply highlighting if there's a search query
+      const searchTerm = QUERY ? QUERY.trim() : '';
+      if (searchTerm) {
+        td.innerHTML = highlightText(textValue, searchTerm);
+      } else {
+        td.textContent = textValue;
+      }
+      
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -1320,17 +1660,94 @@ function renderRawBody(){
 const onSearch = debounce(()=>{ QUERY = $('#searchInput').value; PAGE=1; applyFilter(); renderRawBody(); }, 200);
 
 /* ========= roles + auto plan (no-AI) ========= */
-// ERP System Optimization: Enhanced patterns for common ERP data structures
+// Enhanced Pattern Recognition for Business Data Types
 const NAME_PATTERNS = {
-  metric: /(amount|total|qty|quantity|price|unit[_\s-]*price|revenue|sales|cost|profit|margin|rate|percent|%|tax|fee|金额|总额|数量|单价|价格|费|税)/i,
-  code: /(code|id|sku|account|acct|编号|编码|货号|料号|单号|订单号|客户号|编号$|代码$|no\.?$|number$)/i,
-  date: /(date|time|day|month|quarter|year|日期|时间|月份|季度|年份)/i,
-  // ERP-specific patterns
-  erpAmount: /(amount|total|price|cost|revenue|sales|profit|margin)/i,
-  erpQuantity: /(qty|quantity)/i,
-  erpCode: /(code|id|sku|account|acct|编号|编码|货号|料号|单号|订单号|客户号)/i
+  // Core metric patterns with expanded business terminology
+  metric: /(amount|total|revenue|sales|price|unit[_\s-]*price|cost|profit|margin|rate|percent|%|tax|fee|value|worth|balance|qty|quantity|金额|总额|数量|单价|价格|费|税|值|余额)/i,
+  
+  // Comprehensive code/ID patterns for ERP/CRM systems
+  code: /(code|id|sku|account|acct|ref|reference|key|编号|编码|货号|料号|单号|订单号|客户号|编号$|代码$|no\.?$|number$|num$)/i,
+  
+  // Enhanced date/time patterns with business contexts
+  date: /(date|time|day|month|quarter|year|created|updated|modified|issued|due|expired|日期|时间|月份|季度|年份)/i,
+  
+  // Financial metrics (highest priority for business data)
+  financial: /(amount|total|price|cost|revenue|sales|profit|margin|balance|budget|forecast|target|actual|variance|金额|总额|收入|成本|利润|预算)/i,
+  
+  // Quantity and measurement patterns
+  quantity: /(qty|quantity|count|units|pieces|volume|weight|size|length|width|height|数量|件数|重量|体积)/i,
+  
+  // Business entity identifiers
+  entityId: /(customer[_\s-]*id|client[_\s-]*id|vendor[_\s-]*id|supplier[_\s-]*id|employee[_\s-]*id|product[_\s-]*id|order[_\s-]*id|invoice[_\s-]*id|客户号|供应商号|员工号|产品号)/i,
+  
+  // Address and location patterns
+  location: /(address|street|city|state|province|country|zip|postal|region|territory|location|地址|城市|省份|国家|邮编)/i,
+  
+  // Contact information patterns
+  contact: /(email|phone|tel|mobile|fax|contact|website|url|邮箱|电话|手机|传真|联系)/i,
+  
+  // Status and category patterns
+  status: /(status|state|stage|phase|type|category|class|group|level|priority|rank|状态|类型|分类|等级|优先级)/i,
+  
+  // Hierarchical relationship patterns
+  hierarchy: /(parent|child|level|tier|dept|department|division|team|manager|supervisor|superior|subordinate|上级|下级|部门|团队|经理)/i,
+  
+  // Temporal series patterns
+  temporal: /(period|quarter|month|week|day|fiscal|year|season|cycle|trend|sequence|时期|季度|月份|周|年|趋势)/i
 };
 const CODE_LIKE_NUM = /(zip|postal|phone|tel|nid|ic|passport|order|invoice|po|so)$/i;
+
+// Enhanced role detection with hierarchical and temporal analysis
+function detectHierarchicalRelationships(profile) {
+  const relationships = {};
+  const columns = profile.columns.map(c => c.name.toLowerCase());
+  
+  // Look for parent-child relationships
+  columns.forEach(colName => {
+    if (NAME_PATTERNS.hierarchy.test(colName)) {
+      if (colName.includes('parent') || colName.includes('manager') || colName.includes('上级')) {
+        const childCol = columns.find(c => 
+          (c.includes('child') || c.includes('subordinate') || c.includes('下级')) ||
+          c.includes(colName.replace(/parent|manager|上级/g, ''))
+        );
+        if (childCol) {
+          relationships[colName] = { type: 'parent', child: childCol };
+          relationships[childCol] = { type: 'child', parent: colName };
+        }
+      }
+    }
+  });
+  
+  return relationships;
+}
+
+function detectTemporalPatterns(col, rows) {
+  const name = col.name.toLowerCase();
+  const isTemporalSeries = NAME_PATTERNS.temporal.test(name);
+  
+  if (!isTemporalSeries || col.type !== 'string') return null;
+  
+  // Sample data to detect patterns
+  const samples = rows.slice(0, Math.min(100, rows.length)).map(row => row[col.name]).filter(v => v);
+  
+  // Check for sequential patterns (Q1, Q2, Q3, Q4 or Month1, Month2, etc.)
+  const hasSequentialPattern = samples.some(val => 
+    /^(q|quarter|month|week|period|season)[_\s-]*\d+$/i.test(val) ||
+    /^\d+[_\s-]*(q|quarter|month|week|period|season)$/i.test(val)
+  );
+  
+  // Check for fiscal year patterns (FY2024, 2024Q1, etc.)
+  const hasFiscalPattern = samples.some(val =>
+    /^(fy|fiscal)[_\s-]*\d{4}$/i.test(val) ||
+    /^\d{4}[_\s-]*(q\d|quarter\d)$/i.test(val)
+  );
+  
+  return {
+    isSequential: hasSequentialPattern,
+    isFiscal: hasFiscalPattern,
+    pattern: hasSequentialPattern ? 'sequential' : hasFiscalPattern ? 'fiscal' : 'none'
+  };
+}
 
 function inferRole(col, profile, rows) {
   const name = col.name || '';
@@ -1338,122 +1755,294 @@ function inferRole(col, profile, rows) {
   const uniq = col.unique || 0;
   const rowCount = profile.rowCount || Math.max(1, rows.length);
   const uniqRatio = rowCount ? uniq / rowCount : 0;
-  const isCodeByName = NAME_PATTERNS.code.test(name);
-  const isDateByName = NAME_PATTERNS.date.test(name);
-  const isMetricByName = NAME_PATTERNS.metric.test(name);
-  // ERP-specific patterns
-  const isERPAmount = NAME_PATTERNS.erpAmount.test(name);
-  const isERPQuantity = NAME_PATTERNS.erpQuantity.test(name);
-  const isERPCode = NAME_PATTERNS.erpCode.test(name);
   
-  if (type === 'date' || isDateByName) return { role: 'date' };
+  // Enhanced pattern matching with priority scoring
+  const patterns = {
+    financial: NAME_PATTERNS.financial.test(name),
+    quantity: NAME_PATTERNS.quantity.test(name),
+    entityId: NAME_PATTERNS.entityId.test(name),
+    location: NAME_PATTERNS.location.test(name),
+    contact: NAME_PATTERNS.contact.test(name),
+    status: NAME_PATTERNS.status.test(name),
+    hierarchy: NAME_PATTERNS.hierarchy.test(name),
+    temporal: NAME_PATTERNS.temporal.test(name),
+    code: NAME_PATTERNS.code.test(name),
+    date: NAME_PATTERNS.date.test(name),
+    metric: NAME_PATTERNS.metric.test(name)
+  };
+  
+  // Detect temporal patterns for enhanced time-series recognition
+  const temporalInfo = detectTemporalPatterns(col, rows);
+  
+  // Date/Time detection with enhanced temporal patterns
+  if (type === 'date' || patterns.date || (temporalInfo && temporalInfo.pattern !== 'none')) {
+    return { 
+      role: 'date', 
+      temporal: temporalInfo,
+      priority: patterns.temporal ? 'high' : 'normal'
+    };
+  }
+  
+  // Enhanced numeric role detection
   if (type === 'number') {
-    // Prioritize Amount columns in ERP systems
-    if (isERPAmount) return { role: 'metric:strong' };
-    if (isMetricByName) return { role: 'metric:strong' };
-    if (isCodeByName || CODE_LIKE_NUM.test(name)) return { role: 'id' };
-    return { role: 'metric' };
+    // Absolute highest priority for 'Amount'
+    if (/amount/i.test(name)) return { role: 'metric:strong', category: 'financial', priority: 'critical' };
+
+    // Highest priority: Financial metrics
+    if (patterns.financial) return { role: 'metric:strong', category: 'financial', priority: 'high' };
+    
+    // High priority: Quantity metrics
+    if (patterns.quantity) return { role: 'metric:strong', category: 'quantity', priority: 'normal' };
+    
+    // Standard metrics
+    if (patterns.metric) return { role: 'metric:strong', category: 'general', priority: 'normal' };
+    
+    // ID-like numbers (codes, postal codes, etc.)
+    if (patterns.code || patterns.entityId || CODE_LIKE_NUM.test(name)) {
+      return { role: 'id', category: 'identifier', priority: 'normal' };
+    }
+    
+    // Default numeric handling
+    return { role: 'metric', category: 'general', priority: 'low' };
   }
+  
+  // Enhanced string role detection
   if (type === 'string') {
-    if (isERPCode || isCodeByName) return { role: 'id' };
-    if (uniqRatio > 0.95) return { role: 'id' };
-    return { role: 'dimension' };
+    // Entity identifiers (highest priority for IDs)
+    if (patterns.entityId) return { role: 'id', category: 'entity', priority: 'high' };
+    
+    // General codes and IDs
+    if (patterns.code) return { role: 'id', category: 'code', priority: 'normal' };
+    
+    // High uniqueness ratio suggests ID
+    if (uniqRatio > 0.95) return { role: 'id', category: 'unique', priority: 'normal' };
+    
+    // Contact information (special handling for CRM data)
+    if (patterns.contact) return { role: 'dimension', category: 'contact', priority: 'high' };
+    
+    // Location data (important for geographic analysis)
+    if (patterns.location) return { role: 'dimension', category: 'location', priority: 'high' };
+    
+    // Status/Category fields (important for filtering)
+    if (patterns.status) return { role: 'dimension', category: 'status', priority: 'high' };
+    
+    // Hierarchical data (special handling for org charts)
+    if (patterns.hierarchy) return { role: 'dimension', category: 'hierarchy', priority: 'high' };
+    
+    // Temporal categories (quarters, periods, etc.)
+    if (patterns.temporal || temporalInfo) {
+      return { 
+        role: 'dimension', 
+        category: 'temporal', 
+        priority: 'high',
+        temporal: temporalInfo 
+      };
+    }
+    
+    // Default string handling
+    return { role: 'dimension', category: 'general', priority: 'normal' };
   }
-  return { role: 'ignore' };
+  
+  const result = { role: 'ignore', category: 'unknown', priority: 'none' };
+  console.log(`[inferRole] Finished ${name}:`, result);
+  return result;
 }
 
 function pickPrimaryMetric(profile, rows) {
   const numCols = profile.columns.filter(c => c.type === 'number');
-  
-  // ERP System Optimization: Explicitly prioritize key financial columns first
-  const priorityPatterns = [
-    /amount/i,
-    /price/i,
-    /total.*price/i,
-    /revenue/i,
-    /cost/i,
-    /sales/i,
-    /profit/i,
-    /margin/i,
-    /tax/i,
-    /fee/i,
-    /discount/i,
-    /invoice/i,
-    /payment/i,
-    /balance/i,
-    /budget/i,
-    /expense/i,
-    /income/i,
-    /earnings/i,
-    /roi/i,
-    /percentage/i,
-    /rate/i,
-    /ratio/i,
-    /followers/i,
-    /count/i,
-    /quantity/i,
-    /qty/i
-  ];
-  
-  // Check for each priority pattern in order
-  for (const pattern of priorityPatterns) {
-    const matchedCols = numCols.filter(c => pattern.test(c.name));
-    if (matchedCols.length > 0) {
-      return matchedCols[0];
-    }
-  }
   
   // Then look for other strong metrics
   const scored = numCols.map(c => {
     let nameScore = NAME_PATTERNS.metric.test(c.name) ? 2 : 0;
     
     // Give extra points to key financial terms
-    if (/amount/i.test(c.name)) nameScore += 7;
-    else if (/price/i.test(c.name)) nameScore += 6;
-    else if (/total.*price/i.test(c.name)) nameScore += 6;
-    else if (/(revenue|sales|profit|margin)/i.test(c.name)) nameScore += 5;
-    else if (/(tax|fee|discount|invoice|payment)/i.test(c.name)) nameScore += 4;
-    else if (/(balance|budget|expense|income|earnings)/i.test(c.name)) nameScore += 4;
-    else if (/(roi|percentage|rate|ratio)/i.test(c.name)) nameScore += 3;
-    else if (/(followers|count|quantity|qty)/i.test(c.name)) nameScore += 2;
+    if (/amount/i.test(c.name)) nameScore += 8;
+    if (/total/i.test(c.name)) nameScore += 7;
+    if (/price/i.test(c.name)) nameScore += 6;
+    if (/(revenue|sales|profit|margin)/i.test(c.name)) nameScore += 5;
+    if (/(tax|fee|discount|invoice|payment)/i.test(c.name)) nameScore += 4;
+    if (/(balance|budget|expense|income|earnings)/i.test(c.name)) nameScore += 4;
+    if (/(roi|percentage|rate|ratio)/i.test(c.name)) nameScore += 3;
+    if (/(followers|count|quantity|qty)/i.test(c.name)) nameScore += 2;
     
     const vals = rows.slice(0, 2000).map(r => toNum(r[c.name])).filter(Number.isFinite);
     const mean = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
     const varc = vals.length ? vals.reduce((a,b)=>a+(b-mean)*(b-mean),0)/vals.length : 0;
-    return { col: c, score: nameScore + (isFinite(varc) ? Math.log10(1+varc) : 0) };
+    const finalScore = nameScore + (isFinite(varc) ? Math.log10(1+varc) : 0);
+    console.log(`[pickPrimaryMetric] Scoring ${c.name}: nameScore=${nameScore}, varc=${varc.toFixed(2)}, finalScore=${finalScore.toFixed(2)}`);
+    return { col: c, score: finalScore };
   });
   scored.sort((a,b)=>b.score-a.score);
-  return scored[0]?.col || numCols[0] || null;
+  console.log('[pickPrimaryMetric] All scores:', scored.map(s => `${s.col.name}: ${s.score.toFixed(2)}`).join(', '));
+  const best = scored[0]?.col || numCols[0] || null;
+  console.log('[pickPrimaryMetric] Selected:', best?.name);
+  return best;
 }
 
 function autoPlan(profile, rows) {
+  console.log('[autoPlan] Starting plan...');
   const roles = profile.columns.map(c => ({ col:c, ...inferRole(c, profile, rows) }));
-  const dims = roles.filter(x => x.role==='dimension').map(x => x.col);
-  const dates = roles.filter(x => x.role==='date').map(x => x.col);
-  const metricsStrong = roles.filter(x => x.role==='metric:strong').map(x => x.col);
-  const metrics = roles.filter(x => x.role==='metric' || x.role==='metric:strong').map(x => x.col);
-  const primary = metricsStrong[0] || pickPrimaryMetric(profile, rows);
-  const jobs = []; const charts = [];
-  if (dates.length && primary) {
-    jobs.push({ groupBy: dates[0].name, metric: primary.name, agg:'sum', dateBucket:autoBucket(rows, dates[0].name) });
-    charts.push({ useJob: jobs.length-1, preferredType:'line', title:`${primary.name} over ${dates[0].name}` });
-  }
-  dims.slice(0,3).forEach(d => {
-    if (primary) {
-      jobs.push({ groupBy:d.name, metric:primary.name, agg:'sum' });
-      charts.push({ useJob: jobs.length-1, preferredType: d.unique<=8 ? 'pie' : 'bar', title:`${primary.name} by ${d.name}` });
-      jobs.push({ groupBy:d.name, metric:primary.name, agg:'avg' });
-      charts.push({ useJob: jobs.length-1, preferredType:'hbar', title:`avg ${primary.name} by ${d.name}` });
-    }
-    jobs.push({ groupBy:d.name, metric:null, agg:'count' });
-    charts.push({ useJob: jobs.length-1, preferredType: d.unique<=8 ? 'pie' : 'bar', title:`count by ${d.name}` });
+  console.log('[autoPlan] All inferred roles:', roles);
+  
+  // Enhanced role categorization with business intelligence
+  const dims = roles.filter(x => x.role==='dimension').map(x => ({ ...x, col: x.col }));
+  const dates = roles.filter(x => x.role==='date').map(x => ({ ...x, col: x.col }));
+  const metricsStrong = roles.filter(x => x.role==='metric:strong').map(x => ({ ...x, col: x.col }));
+  const metrics = roles.filter(x => x.role==='metric' || x.role==='metric:strong').map(x => ({ ...x, col: x.col }));
+  
+  // Sort strong metrics by the priority assigned in inferRole
+  metricsStrong.sort((a, b) => {
+    const priorities = { critical: 3, high: 2, normal: 1, low: 0 };
+    const priorityA = priorities[a.priority] || 0;
+    const priorityB = priorities[b.priority] || 0;
+    return priorityB - priorityA;
   });
-  const second = metrics.find(m => m.name !== primary?.name);
-  if (second && dims.length) {
-    jobs.push({ groupBy:dims[0].name, metric:second.name, agg:'sum' });
-    charts.push({ useJob: jobs.length-1, preferredType:'bar', title:`${second.name} by ${dims[0].name}` });
+  console.log('[autoPlan] Sorted strong metrics:', metricsStrong.map(m => `${m.col.name} (priority: ${m.priority})`));
+  
+  // Detect hierarchical relationships
+  const hierarchicalRels = detectHierarchicalRelationships(profile);
+  
+  // Categorize dimensions by business context
+  const businessDims = {
+    financial: dims.filter(d => d.category === 'financial'),
+    location: dims.filter(d => d.category === 'location'),
+    contact: dims.filter(d => d.category === 'contact'),
+    status: dims.filter(d => d.category === 'status'),
+    hierarchy: dims.filter(d => d.category === 'hierarchy'),
+    temporal: dims.filter(d => d.category === 'temporal'),
+    general: dims.filter(d => d.category === 'general' || !d.category)
+  };
+  
+  // Prioritize metrics by business importance
+  const financialMetrics = metricsStrong.filter(m => m.category === 'financial');
+  const quantityMetrics = metricsStrong.filter(m => m.category === 'quantity');
+  const generalMetrics = metricsStrong.filter(m => m.category === 'general' || !m.category);
+  
+  // Select primary metric with enhanced business logic
+  const primary = financialMetrics[0]?.col || quantityMetrics[0]?.col ||
+                  metricsStrong[0]?.col || pickPrimaryMetric(profile, rows);
+  console.log('[autoPlan] Final primary metric selected:', primary?.name);
+  const jobs = []; const charts = [];
+  
+  // Enhanced temporal analysis with business patterns
+  if (dates.length && primary) {
+    const dateCol = dates[0];
+    const bucket = autoBucket(rows, dateCol.col.name);
+    jobs.push({ 
+      groupBy: dateCol.col.name, 
+      metric: primary.name, 
+      agg: dateCol.category === 'financial' ? 'sum' : 'sum',
+      dateBucket: bucket,
+      temporal: dateCol.temporal
+    });
+    charts.push({ 
+      useJob: jobs.length-1, 
+      preferredType: 'line', 
+      title: `${primary.name} over ${dateCol.col.name}`,
+      priority: 'critical'
+    });
   }
-  return { jobs: jobs.slice(0,10), charts };
+  
+  // Prioritized dimension analysis based on business context
+  const prioritizedDims = [
+    ...businessDims.status.slice(0,1),      // Status/Category (highest business value)
+    ...businessDims.location.slice(0,1),    // Geographic analysis
+    ...businessDims.hierarchy.slice(0,1),   // Organizational structure
+    ...businessDims.temporal.slice(0,1),    // Temporal categories
+    ...businessDims.general.slice(0,2)      // General dimensions
+  ].slice(0,3);
+  
+  prioritizedDims.forEach(d => {
+    if (primary && d.col) {
+      // Financial metrics use sum, others use appropriate aggregation
+      const aggType = d.category === 'financial' ? 'sum' : 'sum';
+      jobs.push({ 
+        groupBy: d.col.name, 
+        metric: primary.name, 
+        agg: aggType,
+        category: d.category,
+        priority: d.priority
+      });
+      
+      // Smart chart type selection based on data category
+      let chartType = 'bar';
+      if (d.category === 'status' && d.col.unique <= 8) chartType = 'pie';
+      else if (d.category === 'location') chartType = 'bar';
+      else if (d.category === 'hierarchy') chartType = 'hbar';
+      else if (d.col.unique <= 8) chartType = 'pie';
+      
+      charts.push({ 
+        useJob: jobs.length-1, 
+        preferredType: chartType, 
+        title: `${primary.name} by ${d.col.name}`,
+        category: d.category,
+        priority: d.priority === 'high' ? 'high' : 'normal'
+      });
+      
+      // Add average analysis for high-value dimensions
+      if (d.priority === 'high' || d.category === 'location') {
+        jobs.push({ 
+          groupBy: d.col.name, 
+          metric: primary.name, 
+          agg: 'avg',
+          category: d.category,
+          priority: d.priority
+        });
+        charts.push({ 
+          useJob: jobs.length-1, 
+          preferredType: 'hbar', 
+          title: `avg ${primary.name} by ${d.col.name}`,
+          category: d.category,
+          priority: 'normal'
+        });
+      }
+    }
+    
+    // Count analysis for all dimensions
+    if (d.col) {
+      jobs.push({ 
+        groupBy: d.col.name, 
+        metric: null, 
+        agg: 'count',
+        category: d.category
+      });
+      charts.push({ 
+        useJob: jobs.length-1, 
+        preferredType: d.col.unique <= 8 ? 'pie' : 'bar', 
+        title: `count by ${d.col.name}`,
+        category: d.category,
+        priority: 'low'
+      });
+    }
+  });
+  
+  // Secondary metric analysis with business context
+  const secondaryMetrics = [
+    ...quantityMetrics.filter(m => m.col.name !== primary?.name).slice(0,1),
+    ...generalMetrics.filter(m => m.col.name !== primary?.name).slice(0,1)
+  ];
+  
+  if (secondaryMetrics.length && prioritizedDims.length) {
+    const secondMetric = secondaryMetrics[0];
+    const topDim = prioritizedDims[0];
+    if (secondMetric.col && topDim.col) {
+      jobs.push({ 
+        groupBy: topDim.col.name, 
+        metric: secondMetric.col.name, 
+        agg: secondMetric.category === 'financial' ? 'sum' : 'sum',
+        category: secondMetric.category
+      });
+      charts.push({ 
+        useJob: jobs.length-1, 
+        preferredType: 'bar', 
+        title: `${secondMetric.col.name} by ${topDim.col.name}`,
+        category: secondMetric.category,
+        priority: 'normal'
+      });
+    }
+  }
+  
+  return { jobs: jobs.slice(0,10), charts, hierarchicalRels, businessContext: businessDims };
 }
 
 function autoBucket(rows, dateCol){
@@ -1474,11 +2063,23 @@ function bucketDate(d, bucket){
   if (bucket==='quarter') return `${y}-Q${Math.floor((m-1)/3)+1}`;
   if (bucket==='month') return `${y}-${String(m).padStart(2,'0')}`;
   if (bucket==='week'){
-    const d2 = new Date(Date.UTC(y, dt.getUTCMonth(), day));
-    const dayNum = (d2.getUTCDay()+6)%7; d2.setUTCDate(d2.getUTCDate()-dayNum+3);
-    const firstThursday = new Date(Date.UTC(d2.getUTCFullYear(),0,4));
-    const week = 1 + Math.round(((d2 - firstThursday)/86400000 - 3 + ((firstThursday.getUTCDay()+6)%7))/7);
-    return `${d2.getUTCFullYear()}-W${String(week).padStart(2,'0')}`;
+    // Calculate ISO 8601 week number
+    // Create a new date for the given date (to avoid modifying the original)
+    const date = new Date(Date.UTC(y, dt.getUTCMonth(), day));
+    
+    // Set to nearest Thursday (current date + 4 - current day number)
+    // Make Sunday's day number 7 (convert Sunday from 0 to 7)
+    const dayNum = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate() + (4 - dayNum));
+    
+    // Get first day of year
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    
+    // Calculate full weeks to nearest Thursday
+    const weekNum = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+    
+    // Return week number in format YYYY-WXX
+    return `${date.getUTCFullYear()}-W${String(weekNum).padStart(2,'0')}`;
   }
   return `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`; // day
 }
@@ -1512,15 +2113,94 @@ function groupAgg(rows, groupBy, metric, agg, dateBucket=''){
     else if (agg==='distinct_count') val = new Set(arr).size;
     out.push([k, val]);
   }
-  if (isDateCol && dateBucket){
-    // Chronological order for date buckets (labels are zero-padded so lexicographic works)
-    out.sort((a,b)=> {
+  if (isDateCol || dateBucket) {
+    // Chronological order for date columns and date buckets
+    out.sort((a, b) => {
       const ak = String(a[0] ?? '');
       const bk = String(b[0] ?? '');
-      return ak < bk ? -1 : ak > bk ? 1 : 0;
+      
+      // For date buckets, parse the formatted strings back to dates for proper sorting
+      if (dateBucket) {
+        // Handle different bucket formats
+        let dateA, dateB;
+        
+        if (dateBucket === 'year') {
+          // Format: "YYYY"
+          dateA = new Date(`${ak}-01-01`);
+          dateB = new Date(`${bk}-01-01`);
+        } else if (dateBucket === 'quarter') {
+          // Format: "YYYY-QX"
+          const [, yearA, quarterA] = ak.match(/^(\d+)-Q(\d)$/) || [];
+          const [, yearB, quarterB] = bk.match(/^(\d+)-Q(\d)$/) || [];
+          if (yearA && quarterA && yearB && quarterB) {
+            dateA = new Date(Date.UTC(parseInt(yearA), (parseInt(quarterA) - 1) * 3, 1));
+            dateB = new Date(Date.UTC(parseInt(yearB), (parseInt(quarterB) - 1) * 3, 1));
+          } else {
+            // Fallback to string comparison
+            return ak < bk ? -1 : ak > bk ? 1 : 0;
+          }
+        } else if (dateBucket === 'month') {
+          // Format: "YYYY-MM"
+          const [, yearA, monthA] = ak.match(/^(\d+)-(\d{2})$/) || [];
+          const [, yearB, monthB] = bk.match(/^(\d+)-(\d{2})$/) || [];
+          if (yearA && monthA && yearB && monthB) {
+            dateA = new Date(Date.UTC(parseInt(yearA), parseInt(monthA) - 1, 1));
+            dateB = new Date(Date.UTC(parseInt(yearB), parseInt(monthB) - 1, 1));
+          } else {
+            // Fallback to string comparison
+            return ak < bk ? -1 : ak > bk ? 1 : 0;
+          }
+        } else if (dateBucket === 'week') {
+          // Format: "YYYY-WXX"
+          const [, yearA, weekA] = ak.match(/^(\d+)-W(\d{2})$/) || [];
+          const [, yearB, weekB] = bk.match(/^(\d+)-W(\d{2})$/) || [];
+          if (yearA && weekA && yearB && weekB) {
+            // Convert week number to date (Monday of that week)
+            dateA = new Date(Date.UTC(parseInt(yearA), 0, 4)); // January 4th (close to first Monday)
+            dateA.setDate(dateA.getDate() - ((dateA.getDay() + 6) % 7) + (parseInt(weekA) - 1) * 7);
+            
+            dateB = new Date(Date.UTC(parseInt(yearB), 0, 4)); // January 4th (close to first Monday)
+            dateB.setDate(dateB.getDate() - ((dateB.getDay() + 6) % 7) + (parseInt(weekB) - 1) * 7);
+          } else {
+            // Fallback to string comparison
+            return ak < bk ? -1 : ak > bk ? 1 : 0;
+          }
+        } else {
+          // Day format: "YYYY-MM-DD"
+          const partsA = ak.split('-');
+          const partsB = bk.split('-');
+          if (partsA.length === 3 && partsB.length === 3) {
+            dateA = new Date(Date.UTC(parseInt(partsA[0]), parseInt(partsA[1]) - 1, parseInt(partsA[2])));
+            dateB = new Date(Date.UTC(parseInt(partsB[0]), parseInt(partsB[1]) - 1, parseInt(partsB[2])));
+          } else {
+            // Fallback to string comparison
+            return ak < bk ? -1 : ak > bk ? 1 : 0;
+          }
+        }
+        
+        // Compare the parsed dates
+        if (dateA && dateB) {
+          return dateA.getTime() - dateB.getTime();
+        } else {
+          // Fallback to string comparison if parsing failed
+          return ak < bk ? -1 : ak > bk ? 1 : 0;
+        }
+      } else {
+        // For regular date columns, parse the values as dates
+        const dateA = parseDateSafe(ak);
+        const dateB = parseDateSafe(bk);
+        
+        // If both are valid dates, compare them
+        if (!Number.isNaN(dateA) && !Number.isNaN(dateB)) {
+          return dateA - dateB;
+        } else {
+          // Fallback to string comparison
+          return ak < bk ? -1 : ak > bk ? 1 : 0;
+        }
+      }
     });
   } else {
-    // Default: sort by metric descending
+    // Default: sort by metric descending for non-date columns
     out.sort((a,b)=> (Number(b[1]||0) - Number(a[1]||0)));
   }
   return { header:[isDateCol && dateBucket ? `${groupBy} (${dateBucket})` : groupBy, `${agg}(${metric||'*'})`], rows: out };
@@ -1683,9 +2363,13 @@ function ensureChart(canvas, cfg, shouldResize=false){
     // Update existing chart
     chart.data.labels = cfg.data.labels;
     chart.data.datasets[0].data = cfg.data.datasets[0].data;
+    
+    // Update dataset properties that might change (like fill for line/area switch)
+    Object.assign(chart.data.datasets[0], cfg.data.datasets[0]);
+    
     // Merge options to allow for dynamic updates without full recreation
-    // This is a simplified merge; a more robust solution might deep merge or selectively update
     Object.assign(chart.options, cfg.options);
+    
     // Only force a resize when CSS dimension actually changed
     if (shouldResize) chart.resize();
     chart.update('none'); // snappier redraw without animation
@@ -1720,11 +2404,49 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
   topNInput.value=String(defaultTopN);
   topNInput.placeholder='Top-N';
   
+  const editBtn = document.createElement('button'); 
+  editBtn.textContent='Edit';
+  editBtn.className='btn-secondary';
+  editBtn.title='Edit chart configuration';
+  
   const redrawBtn = document.createElement('button'); redrawBtn.textContent='Redraw';
   const pngBtn = document.createElement('button'); pngBtn.textContent='Download PNG';
-  
-  controls.append(typeSel, topNInput, redrawBtn, pngBtn);
+  const addChartBtn = document.createElement('button'); addChartBtn.textContent = 'Add Chart';
+  const deleteBtn = document.createElement('button'); deleteBtn.textContent = 'Delete';
+
+  controls.append(typeSel, topNInput, editBtn, redrawBtn, pngBtn, addChartBtn, deleteBtn);
   head.append(left, controls);
+  // Auto redraw + auto-save on control changes
+  typeSel.addEventListener('change', () => { draw(); debouncedAutoSave(); });
+  topNInput.addEventListener('change', () => { draw(); debouncedAutoSave(); });
+
+  addChartBtn.onclick = () => {
+    const t = typeSel.value;
+    const n = Math.max(3, Math.min(999, Number(topNInput.value) || 20));
+    const parentCard = c.closest('.card');
+    const chartsContainer = parentCard.querySelector('.chart-cards');
+    const title = parentCard.querySelector('.card-title').textContent;
+    renderChartCard(agg, chartsContainer, t, n, title.replace(/\s+/, '_'));
+    showToast('New chart card added.', 'success');
+    debouncedAutoSave();
+  };
+
+  deleteBtn.onclick = () => {
+    const chartCard = c;
+    const rec = chartRegistry.get(canvas);
+    if (rec) {
+      if (rec.ro) {
+        try { rec.ro.disconnect(); } catch {}
+      }
+      if (rec.chart) {
+        try { rec.chart.destroy(); } catch {}
+      }
+      chartRegistry.delete(canvas);
+    }
+    chartCard.remove();
+    showToast('Chart deleted.', 'info');
+    debouncedAutoSave();
+  };
   c.appendChild(head);
   const box = document.createElement('div'); box.className='chart-box';
   const canvas = document.createElement('canvas'); box.appendChild(canvas); c.appendChild(box); chartsContainer.appendChild(c);
@@ -1732,6 +2454,10 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
     const topN = Number(topNInput.value)||20;
     const cfg = computeChartConfig(agg, typeSel.value, topN);
     const isCircular = (cfg.type==='pie' || cfg.type==='doughnut' || cfg.type==='polarArea' || cfg.type==='radar');
+
+    // Keep previously applied dims to detect changes
+    const prevW = canvas.dataset.w || '';
+    const prevH = canvas.dataset.h || '';
 
     // Completely reset all inline styles to avoid conflicts
     canvas.setAttribute('style', '');
@@ -1744,45 +2470,184 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
     // Determine target size
     let shouldResize = false;
 
-    // Horizontal scroll for vertical charts (indexAxis !== 'y')
-    if (!isCircular && (cfg.options?.indexAxis!=='y')){
-      const labelsCount = (cfg.data?.labels?.length)||0;
-      const pxPer = (cfg.type==='line' || cfg.type==='area') ? 40 : 60;
-      const minW = 300; // Reduced minimum for mobile
-      const maxW = 1200; // Reduced maximum to fit within container
-      const w = Math.min(maxW, Math.max(minW, labelsCount * pxPer));
-      // Only set explicit width if it's larger than container to enable horizontal scroll
-      if (w > 600) { // Only for charts that need horizontal space
-        canvas.style.setProperty('width', w + 'px', 'important');
-      } else {
-        // For smaller charts, use container width
-        canvas.style.setProperty('width', '100%', 'important');
-      }
-      shouldResize = true;
-    }
-
-    // Vertical scroll for horizontal bar charts (indexAxis === 'y')
-    if (!isCircular && (cfg.options?.indexAxis==='y')){
-      const labelsCount = (cfg.data?.labels?.length)||0;
-      const pxPer = 34; // per bar row
-      const minH = 260;
-      const maxH = 1200; // Reduced maximum to fit within container
-      const h = Math.min(maxH, Math.max(minH, labelsCount * pxPer));
-      // Override stylesheet's height:100% !important
-      canvas.style.setProperty('height', h + 'px', 'important');
-      // Force width to container to prevent runaway horizontal growth
-      canvas.style.setProperty('width', '100%', 'important');
-      shouldResize = true;
-    }
-
-    // Circular charts: lock to container (no custom width/height)
-    if (isCircular){
-      shouldResize = true;
-    }
+    // Let all charts use container sizing for responsive design
+    shouldResize = (prevW || prevH); // trigger resize if we had custom sizing before
+    
+    // Clear any previous custom sizing
+    delete canvas.dataset.w;
+    delete canvas.dataset.h;
 
     ensureChart(canvas, cfg, shouldResize);
+    showToast('Chart redrawn.', 'info');
   }
-  redrawBtn.onclick = draw; pngBtn.onclick = ()=>{ const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download = `${titleForFile}.png`; a.click(); };
+  
+  // Create edit panel (initially hidden)
+  const editPanel = document.createElement('div');
+  editPanel.className = 'edit-panel';
+  editPanel.style.display = 'none';
+  editPanel.style.padding = '12px';
+  editPanel.style.background = '#f8f9fa';
+  editPanel.style.border = '1px solid #e2e8f0';
+  editPanel.style.borderRadius = '8px';
+  editPanel.style.marginTop = '8px';
+  
+  // Extract current configuration
+  const groupByCol = agg.header[0];
+  const metricCol = agg.header[1] !== 'count' ? agg.header[1] : null;
+  const aggFunction = agg.header[1] === 'count' ? 'count' : 
+                     agg.header[1].includes('avg') ? 'avg' : 
+                     agg.header[1].includes('sum') ? 'sum' : 'sum';
+  
+  // Detect date bucket from groupBy column
+  let dateBucket = '';
+  const bucketMatch = groupByCol.match(/\((day|week|month|quarter|year)\)/i);
+  if (bucketMatch) {
+    dateBucket = bucketMatch[1].toLowerCase();
+  }
+  const cleanGroupBy = groupByCol.replace(/\s*\((day|week|month|quarter|year)\)$/i, '');
+  
+  // Create edit controls
+  editPanel.innerHTML = `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-items: end;">
+      <label>Group by:
+        <select id="edit-groupby" style="width: 100%; margin-top: 4px;">
+          ${PROFILE.columns.filter(c => ['string','date'].includes(c.type)).map(c => 
+            `<option value="${c.name}" ${c.name === cleanGroupBy ? 'selected' : ''}>${c.name}</option>`
+          ).join('')}
+        </select>
+      </label>
+      <label>Date bucket:
+        <select id="edit-bucket" style="width: 100%; margin-top: 4px;">
+          <option value="">None</option>
+          <option value="day" ${dateBucket === 'day' ? 'selected' : ''}>Day</option>
+          <option value="week" ${dateBucket === 'week' ? 'selected' : ''}>Week</option>
+          <option value="month" ${dateBucket === 'month' ? 'selected' : ''}>Month</option>
+          <option value="quarter" ${dateBucket === 'quarter' ? 'selected' : ''}>Quarter</option>
+          <option value="year" ${dateBucket === 'year' ? 'selected' : ''}>Year</option>
+        </select>
+      </label>
+      <label>Metric:
+        <select id="edit-metric" style="width: 100%; margin-top: 4px;">
+          <option value="">Count records</option>
+          ${PROFILE.columns.filter(c => c.type === 'number').map(c => 
+            `<option value="${c.name}" ${c.name === metricCol ? 'selected' : ''}>${c.name}</option>`
+          ).join('')}
+        </select>
+      </label>
+      <label>Function:
+        <select id="edit-function" style="width: 100%; margin-top: 4px;">
+          <option value="sum" ${aggFunction === 'sum' ? 'selected' : ''}>Sum</option>
+          <option value="avg" ${aggFunction === 'avg' ? 'selected' : ''}>Average</option>
+          <option value="count" ${aggFunction === 'count' ? 'selected' : ''}>Count</option>
+        </select>
+      </label>
+      <div style="display: flex; gap: 8px;">
+        <button id="edit-apply" style="padding: 6px 12px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply</button>
+        <button id="edit-cancel" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+      </div>
+    </div>
+  `;
+  
+  c.appendChild(editPanel);
+  
+  // Add dynamic behavior to metric/function relationship
+  const metricSelect = editPanel.querySelector('#edit-metric');
+  const functionSelect = editPanel.querySelector('#edit-function');
+  
+  metricSelect.addEventListener('change', () => {
+    if (!metricSelect.value) {
+      // No metric selected - force count function
+      functionSelect.value = 'count';
+      functionSelect.disabled = true;
+    } else {
+      // Metric selected - enable all functions
+      functionSelect.disabled = false;
+      if (functionSelect.value === 'count') {
+        functionSelect.value = 'sum'; // Default to sum when metric is selected
+      }
+    }
+  });
+  
+  // Initialize function dropdown state
+  if (!metricSelect.value) {
+    functionSelect.value = 'count';
+    functionSelect.disabled = true;
+  }
+  
+  // Edit button functionality
+  editBtn.onclick = () => {
+    if (editPanel.style.display === 'none') {
+      editPanel.style.display = 'block';
+      editBtn.textContent = 'Cancel Edit';
+    } else {
+      editPanel.style.display = 'none';
+      editBtn.textContent = 'Edit';
+    }
+  };
+  
+  // Apply changes functionality
+  editPanel.querySelector('#edit-apply').onclick = () => {
+    const newGroupBy = editPanel.querySelector('#edit-groupby').value;
+    const newBucket = editPanel.querySelector('#edit-bucket').value;
+    const newMetric = editPanel.querySelector('#edit-metric').value || null;
+    const newFunction = editPanel.querySelector('#edit-function').value;
+
+    // If no metric selected, force count
+    const finalFunction = !newMetric ? 'count' : newFunction;
+
+    // Recompute aggregate for this card
+    const newAgg = groupAgg(ROWS, newGroupBy, newMetric, finalFunction, newBucket);
+
+    // Update the current card's aggregate data (affects all charts in this card)
+    agg.header = newAgg.header;
+    agg.rows = newAgg.rows;
+
+    // Update the header display for this chart card
+    left.textContent = `Chart for: ${newAgg.header[1]} by ${newAgg.header[0]}`;
+
+    // Find and update the associated table and persist job definition on the parent card
+    const chartCard = c;
+    const chartsContainer = chartCard.parentElement;
+    const parentCard = chartsContainer.parentElement;
+
+    if (parentCard) {
+      // Persist job definition so snapshots capture this edit
+      parentCard.dataset.groupBy = newGroupBy || '';
+      parentCard.dataset.metric = newMetric || '';
+      parentCard.dataset.agg = finalFunction || '';
+      parentCard.dataset.dateBucket = newBucket || '';
+
+      // Update card subheader
+      const cardSub = parentCard.querySelector('.card-sub');
+      if (cardSub) {
+        cardSub.textContent = `${newAgg.rows.length} groups · ${newAgg.header[1]}`;
+      }
+
+      // Re-render table
+      const tableBox = parentCard.querySelector('.table-wrap');
+      if (tableBox) {
+        renderAggTable(agg, tableBox, 20);
+      }
+    }
+
+    // Redraw the chart with new data
+    draw();
+
+    // Hide edit panel
+    editPanel.style.display = 'none';
+    editBtn.textContent = 'Edit';
+    showToast('Aggregate updated for this card and will be saved in history.', 'success');
+    debouncedAutoSave();
+  };
+  
+  // Cancel edit functionality
+  editPanel.querySelector('#edit-cancel').onclick = () => {
+    editPanel.style.display = 'none';
+    editBtn.textContent = 'Edit';
+    showToast('Aggregate table updated.', 'success');
+  };
+  
+  redrawBtn.onclick = () => { draw(); debouncedAutoSave(); }; pngBtn.onclick = ()=>{ const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download = `${titleForFile}.png`; a.click(); showToast('Chart downloaded as PNG.', 'success'); };
   draw();
   return c;
 }
@@ -1896,15 +2761,21 @@ function renderAggTable(agg, container, previewN=10){
     a.download = `${(agg.header[1] + ' by ' + agg.header[0]).replace(/\s+/g, '_')}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
+    showToast('Aggregate data downloaded as CSV.', 'success');
   };
   foot.appendChild(dl);
   container.appendChild(foot);
   
   // Function to highlight search terms in text
   function highlightText(text, query) {
-    if (!query) return text;
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
+    if (!query || !query.trim()) return text;
+    // Escape HTML in the text first to prevent XSS
+    const safeText = String(text).replace(/[&<>"']/g, function(m) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+    const escapedQuery = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    return safeText.replace(regex, '<mark>$1</mark>');
   }
   
   // Filter rows based on search query
@@ -1969,7 +2840,13 @@ function renderAggTable(agg, container, previewN=10){
       const td0 = document.createElement('td');
       td0.innerHTML = highlightText(String(r[0]), searchQuery);
       const td1 = document.createElement('td');
-      td1.textContent = nice(Number(r[1]) || 0);
+      const numValue = nice(Number(r[1]) || 0);
+      // Apply highlighting to numeric values too
+      if (searchQuery.trim()) {
+        td1.innerHTML = highlightText(String(numValue), searchQuery);
+      } else {
+        td1.textContent = numValue;
+      }
       tr.append(td0, td1);
       tbody.appendChild(tr);
     });
@@ -2079,6 +2956,8 @@ $('#saveRoles').onclick = ()=>{
   $('#roleTBody').querySelectorAll('select').forEach(sel=>{ MANUAL_ROLES[ sel.getAttribute('data-col') ] = sel.value; });
   $('#roleModal').classList.remove('open');
   renderAggregates();
+  showToast('Column roles saved.', 'success');
+  debouncedAutoSave();
 };
 
 function planFromManualRoles(profile){
@@ -2130,11 +3009,13 @@ $('#addAggConfirm').onclick = ()=>{
   MANUAL_JOBS.push({ groupBy, metric, agg, chart, topN, dateBucket });
   $('#aggModal').classList.remove('open');
   renderAggregates();
+  showToast('New aggregate added.', 'success');
+  debouncedAutoSave();
 };
 
 /* ========= UI glue ========= */
 $('#loadBtn').onclick = async ()=>{
-  const f=$('#file').files[0]; if(!f) return alert('Choose a CSV first.');
+  const f=$('#file').files[0]; if(!f) return showToast('Choose a CSV first.', 'error');
   $('#meta').textContent='Parsing…';
   try{
     const choice=$('#delimiter').value, header=$('#hasHeader').checked;
@@ -2152,7 +3033,16 @@ $('#loadBtn').onclick = async ()=>{
     MANUAL_ROLES = {}; MANUAL_JOBS = [];
     $('#mode').value='auto'; switchMode('auto');
     loadState(); // restore per-header state if available
-  }catch(e){ console.error(e); alert('Parse error: '+(e?.message||e)); $('#meta').textContent='Parse failed.'; }
+    showToast('CSV data loaded successfully.', 'success');
+
+    // Auto-save the initial load as a new history item
+    await saveCurrentStateToHistory(f.name, true); // Pass true to force new entry
+
+    // Enable the update and save as new buttons
+    $('#updateReportBtn').disabled = false;
+    $('#saveAsNewBtn').disabled = false;
+
+  }catch(e){ console.error(e); showToast('Parse error: '+(e?.message||e), 'error'); $('#meta').textContent='Parse failed.'; }
 };
 
 function switchMode(val){
@@ -2166,8 +3056,8 @@ function switchMode(val){
 $('#mode').addEventListener('change', e=>{ switchMode(e.target.value); renderAggregates(); });
 $('#editRolesBtn').onclick = openRoleEditor;
 $('#addAggBtn').onclick = openAddAgg;
-$('#clearManualBtn').onclick = ()=>{ MANUAL_ROLES={}; MANUAL_JOBS=[]; renderAggregates(); };
-$('#recalcBtn').onclick = ()=>{ renderAggregates(); showToast('Recalculated with current roles'); };
+$('#clearManualBtn').onclick = ()=>{ MANUAL_ROLES={}; MANUAL_JOBS=[]; renderAggregates(); showToast('Manual overrides cleared.', 'info'); debouncedAutoSave(); };
+$('#recalcBtn').onclick = ()=>{ renderAggregates(); showToast('Recalculated with current roles', 'success'); debouncedAutoSave(); };
 
 $('#searchInput').addEventListener('input', onSearch);
 $('#rowsPerPage').addEventListener('change', ()=>{ RPP = Number($('#rowsPerPage').value)||25; PAGE=1; renderRawBody(); });
@@ -2182,59 +3072,583 @@ $('#downloadFiltered').addEventListener('click', ()=>{
   const blob = new Blob([header+'\n'+body], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = 'filtered_rows.csv'; a.click(); URL.revokeObjectURL(a.href);
-  showToast('Filtered CSV downloaded');
+  showToast('Filtered CSV downloaded', 'success');
 });
 
-$('#autoBtn').onclick = renderAggregates;
+$('#autoBtn').onclick = () => renderAggregates();
 
-function renderAggregates(){
-  if(!ROWS) return alert('Load a CSV first.');
+function renderAggregates(chartsSnapshot = null){
+  if(!ROWS) return showToast('Load a CSV first.', 'error');
+  
+  // Snapshot restoration handled later using saved jobKey; fall through to unified path
+
+  // Original logic for generating new aggregates
   let plan;
-  if (MODE==='manual'){
-    if (MANUAL_JOBS.length){ plan = { jobs: MANUAL_JOBS.slice(0,10), charts:[] }; }
-    else if (Object.keys(MANUAL_ROLES).length){ plan = planFromManualRoles(PROFILE); }
+    if (MODE === 'manual') {
+    if (MANUAL_JOBS.length) { plan = { jobs: MANUAL_JOBS.slice(0, 10), charts: [] }; }
+    else if (Object.keys(MANUAL_ROLES).length) { plan = planFromManualRoles(PROFILE); }
     else { plan = autoPlan(PROFILE, ROWS); }
-  } else { plan = autoPlan(PROFILE, ROWS); }
+  } else {
+    plan = autoPlan(PROFILE, ROWS);
+  }
+  window.CURRENT_PLAN = plan; // Store plan for snapshotting
+
   const grid=$('#results'); grid.innerHTML='';
-  const aggregates = plan.jobs.map(j => groupAgg(ROWS, j.groupBy, j.metric, j.agg, j.dateBucket||''));
-  aggregates.forEach((agg, idx)=>{
-    const intent = plan.charts.find(c=>c.useJob===idx) || {};
-    const cfg = plan.jobs[idx] || {};
-    const title = intent.title || `${agg.header[1]} by ${agg.header[0]}`;
-    const card=document.createElement('div'); card.className='card';
-    const head=document.createElement('div'); head.className='card-head';
-    const left=document.createElement('div');
-    const h=document.createElement('h4'); h.className='card-title'; h.textContent=title;
-    const sub=document.createElement('div'); sub.className='card-sub'; sub.textContent=`${agg.rows.length} groups · ${agg.header[1]}`;
-    left.append(h, sub); head.append(left); card.appendChild(head);
-    const controls=document.createElement('div'); controls.className='card-controls';
-    const addChartBtn=document.createElement('button'); addChartBtn.textContent='Add Chart Card';
-    const typeSel=document.createElement('select');
-    typeSel.innerHTML=`
-      <option value="auto">Auto</option>
-      <option value="bar">Bar (vertical)</option>
-      <option value="hbar">Bar (horizontal)</option>
-      <option value="line">Line</option>
-      <option value="area">Area</option>
-      <option value="pie">Pie</option>
-      <option value="doughnut">Doughnut</option>
-      <option value="polarArea">Polar Area</option>
-      <option value="radar">Radar</option>`;
-    typeSel.value = intent.preferredType || cfg.chart || 'auto';
-    const topNInput=document.createElement('input'); topNInput.type='number'; topNInput.min='3'; topNInput.max='999'; topNInput.value=String(cfg.topN||20);
-    const hint=document.createElement('span'); hint.className='muted small'; hint.textContent='Top-N: Max items for pie/doughnut charts (3-999, default: 20)';
-    controls.append(hint, typeSel, topNInput, addChartBtn); card.appendChild(controls);
-    const chartsContainer=document.createElement('div'); chartsContainer.className='chart-cards'; card.appendChild(chartsContainer);
-    renderChartCard(agg, chartsContainer, typeSel.value, Number(topNInput.value)||20, title.replace(/\s+/g,'_'));
-    addChartBtn.onclick = ()=>{ const t = typeSel.value; const n = Math.max(3, Math.min(999, Number(topNInput.value)||20)); renderChartCard(agg, chartsContainer, t, n, title.replace(/\s+/g,'_')); };
-    const tableBox=document.createElement('div'); tableBox.className='table-wrap'; card.appendChild(tableBox); renderAggTable(agg, tableBox, 20);
-    grid.appendChild(card);
+
+  // If a snapshot is provided, rebuild each card directly from its saved jobKey
+  if (chartsSnapshot && chartsSnapshot.length > 0) {
+    chartsSnapshot.forEach(cardSnap => {
+      let jobKey = (cardSnap?.charts?.[0]?.jobKey) || cardSnap?.cardJobKey || null;
+
+      // Back-compat: allow deriving from legacy chart fields or title if jobKey is missing/incomplete
+      if (!jobKey || !jobKey.groupBy || !jobKey.agg) {
+        // 1) Legacy snapshots: some versions stored groupBy/metric on each chart
+        const legacy = (cardSnap?.charts || []).find(ch => ch && (ch.groupBy || ch.metric));
+        if (legacy && legacy.groupBy && (!jobKey || !jobKey.groupBy)) {
+          let derivedAgg = 'sum';
+          let metric = (legacy.metric !== undefined ? legacy.metric : null);
+          if (metric === '' || metric === undefined) metric = null;
+          if (!metric) derivedAgg = 'count';
+          // Try to refine agg from title if available, e.g., "avg Sales by Region"
+          const t = cardSnap?.title || '';
+          const am = t.match(/^(count|sum|avg|min|max|distinct_count)\s*\(/i);
+          if (am) derivedAgg = am[1].toLowerCase();
+          jobKey = { groupBy: legacy.groupBy, metric, agg: derivedAgg, dateBucket: '' };
+        }
+      }
+
+      if (!jobKey || !jobKey.groupBy || !jobKey.agg) {
+        // 2) Title parsing fallback: e.g., "sum(Sales) by Country" or "count by Product"
+        const title = cardSnap?.title || '';
+        const m = title.match(/^(.*?)\s+by\s+(.*)$/i);
+        if (m) {
+          let lhs = (m[1] || '').trim();
+          let rhs = (m[2] || '').trim();
+          let dateBucket = '';
+          const bucketMatch = rhs.match(/\((day|week|month|quarter|year)\)$/i);
+          if (bucketMatch) {
+            dateBucket = bucketMatch[1].toLowerCase();
+            rhs = rhs.replace(/\s*\((day|week|month|quarter|year)\)$/i, '');
+          }
+          let agg = 'sum';
+          let metric = null;
+          const aggMatch = lhs.match(/^(count|sum|avg|min|max|distinct_count)\s*\(([^)]*)\)$/i);
+          if (aggMatch) {
+            agg = aggMatch[1].toLowerCase();
+            const met = (aggMatch[2] || '').trim();
+            metric = met && met !== '*' ? met : null;
+          } else if (/^count$/i.test(lhs)) {
+            agg = 'count';
+            metric = null;
+          }
+          jobKey = { groupBy: rhs, metric, agg, dateBucket };
+        }
+      }
+
+      if (!jobKey || !jobKey.groupBy || !jobKey.agg) {
+        console.warn("Missing/invalid jobKey for saved card:", cardSnap?.title);
+        return;
+      }
+
+      // Recompute aggregate from saved job definition
+      const agg = groupAgg(ROWS, jobKey.groupBy, jobKey.metric ?? null, jobKey.agg, jobKey.dateBucket || '');
+
+      const card = document.createElement('div'); card.className = 'card';
+      // Persist job definition on the card for reliable future snapshots
+      card.dataset.groupBy = jobKey.groupBy || '';
+      card.dataset.metric = jobKey.metric || '';
+      card.dataset.agg = jobKey.agg || '';
+      card.dataset.dateBucket = jobKey.dateBucket || '';
+
+      const head = document.createElement('div'); head.className = 'card-head';
+      const left = document.createElement('div');
+      const h = document.createElement('h4'); h.className = 'card-title'; h.textContent = cardSnap.title || `${agg.header[1]} by ${agg.header[0]}`;
+      const sub = document.createElement('div'); sub.className = 'card-sub'; sub.textContent = `${agg.rows.length} groups · ${agg.header[1]}`;
+      left.append(h, sub); head.append(left); card.appendChild(head);
+
+      const chartsContainer = document.createElement('div'); chartsContainer.className = 'chart-cards'; card.appendChild(chartsContainer);
+
+      (cardSnap.charts || []).forEach(chartSnap => {
+        const type = chartSnap?.type || 'auto';
+        const topN = Number(chartSnap?.topN) || 20;
+        renderChartCard(agg, chartsContainer, type, topN, (cardSnap.title || `${agg.header[1]} by ${agg.header[0]}`).replace(/\s+/g, '_'));
+      });
+
+      const tableBox = document.createElement('div'); tableBox.className = 'table-wrap'; card.appendChild(tableBox); renderAggTable(agg, tableBox, 20);
+      grid.appendChild(card);
+    });
+
+  } else {
+    // Original logic for generating new aggregates from a plan
+    const aggregates = plan.jobs.map(j => groupAgg(ROWS, j.groupBy, j.metric, j.agg, j.dateBucket||''));
+    aggregates.forEach((agg, idx)=>{
+      const intent = plan.charts.find(c=>c.useJob===idx) || {};
+      const cfg = plan.jobs[idx] || {};
+      const title = intent.title || `${agg.header[1]} by ${agg.header[0]}`;
+      const card=document.createElement('div'); card.className='card';
+
+      // Persist job definition on the card for reliable future snapshots
+      card.dataset.groupBy = cfg.groupBy || '';
+      card.dataset.metric = cfg.metric || '';
+      card.dataset.agg = cfg.agg || '';
+      card.dataset.dateBucket = cfg.dateBucket || '';
+
+      const head=document.createElement('div'); head.className='card-head';
+      const left=document.createElement('div');
+      const h=document.createElement('h4'); h.className='card-title'; h.textContent=title;
+      const sub=document.createElement('div'); sub.className='card-sub'; sub.textContent=`${agg.rows.length} groups · ${agg.header[1]}`;
+      left.append(h, sub); head.append(left); card.appendChild(head);
+      const controls=document.createElement('div'); controls.className='card-controls';
+      card.appendChild(controls);
+      const chartsContainer=document.createElement('div'); chartsContainer.className='chart-cards'; card.appendChild(chartsContainer);
+      renderChartCard(agg, chartsContainer, intent.preferredType || cfg.chart || 'auto', Number(cfg.topN)||20, title.replace(/\s+/g,'_'));
+      const tableBox=document.createElement('div'); tableBox.className='table-wrap'; card.appendChild(tableBox); renderAggTable(agg, tableBox, 20);
+      grid.appendChild(card);
+    });
+  }
+
+  // Initial layout after cards are added
+  setTimeout(applyMasonryLayout, 150);
+  setTimeout(applyMasonryLayout, 500);
+  showToast('Cards generated successfully.', 'success');
+}
+
+/**
+ * Masonry layout for variable-height .card elements inside #results.grid.
+ * Uses ResizeObserver to recalc spans whenever a card resizes (e.g., Chart.js renders).
+ */
+let __masonryRO = null;
+
+function applyMasonryLayout() {
+  // Defer to ensure DOM and async content (charts) have a chance to render
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const grid = document.querySelector('#results.grid');
+      if (!grid) return;
+
+      // Disconnect previous observer to avoid duplicate callbacks
+      if (__masonryRO) {
+        try { __masonryRO.disconnect(); } catch {}
+        __masonryRO = null;
+      }
+
+      const computed = window.getComputedStyle(grid);
+      const autoRows = parseFloat(computed.getPropertyValue('grid-auto-rows')) || 10;
+      const rowGap = parseFloat(computed.getPropertyValue('row-gap') || computed.getPropertyValue('grid-row-gap') || '0') || 0;
+
+      // Helper to set a card's span based on its current rendered height
+      const setSpan = (card) => {
+        if (!card || !card.isConnected) return;
+        // Clear previous span for accurate measurement
+        card.style.gridRowEnd = '';
+        const rect = card.getBoundingClientRect();
+        const height = Math.max(0, Math.ceil(rect.height));
+        // Avoid zero division; include gap in the denominator for accuracy
+        const denom = Math.max(1, autoRows + rowGap);
+        let span = Math.ceil((height + rowGap) / denom);
+        // Ensure minimum span so collapsed cards don't disappear
+        if (!Number.isFinite(span) || span < 2) span = 2;
+        card.style.gridRowEnd = `span ${span}`;
+      };
+
+      const cards = Array.from(document.querySelectorAll('#results .card'));
+      if (!cards.length) return;
+
+      // Initial pass
+      cards.forEach(setSpan);
+
+      // Observe future size changes (e.g., charts finishing render, fonts loading, window resizes)
+      __masonryRO = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const el = entry.target;
+          // Only handle cards inside our grid
+          if (el && el.classList && el.classList.contains('card')) {
+            setSpan(el);
+          }
+        }
+      });
+
+      cards.forEach(card => __masonryRO.observe(card));
+    });
   });
 }
 
 /* ========= Modal accessibility: ESC & backdrop ========= */
+window.addEventListener('resize', debounce(applyMasonryLayout, 200));
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open')); }});
-['roleModal','aggModal'].forEach(id=>{ const m = document.getElementById(id); m?.addEventListener('click', (e)=>{ if (e.target===m) m.classList.remove('open'); }); });
+['roleModal','aggModal', 'historyModal'].forEach(id=>{ const m = document.getElementById(id); m?.addEventListener('click', (e)=>{ if (e.target===m) m.classList.remove('open'); }); });
+
+/* ========= Manual Save Handlers ========= */
+$('#updateReportBtn').onclick = () => {
+  if (!ROWS) return showToast('No data loaded to update.', 'error');
+  if (!window.currentHistoryId) return showToast('No active report selected to update.', 'error');
+  
+  const currentName = $('#history-list .history-item[data-id="' + window.currentHistoryId + '"] .name')?.textContent || 'current report';
+  if (confirm(`Are you sure you want to overwrite "${currentName}" with the current view?`)) {
+    saveCurrentStateToHistory(currentName, false); // false = update existing
+  }
+};
+
+$('#saveAsNewBtn').onclick = () => {
+  if (!ROWS) return showToast('No data loaded to save.', 'error');
+  
+  const baseName = (LAST_PARSE_META && LAST_PARSE_META.fileName)
+    ? LAST_PARSE_META.fileName.replace(/\.csv$/i, '')
+    : 'Report';
+  const defaultName = `${baseName} (copy) ${getFormattedDateTime()}`;
+    
+  const reportName = prompt('Enter a name for the new report:', defaultName);
+  
+  if (reportName) {
+    saveCurrentStateToHistory(reportName, true); // true = force new entry
+  }
+};
+/* ========= History Sidebar ========= */
+const sidebar = $('#sidebar');
+const toggleBtn = $('#sidebar-toggle');
+toggleBtn.onclick = () => {
+  sidebar.classList.toggle('collapsed');
+};
+
+async function renderHistorySidebar() {
+  const list = $('#history-list');
+  list.innerHTML = '<li>Loading...</li>';
+  try {
+    const historyItems = await Store.listHistory();
+    list.innerHTML = '';
+    if (!historyItems.length) {
+      list.innerHTML = '<li class="muted small">No history yet.</li>';
+      return;
+    }
+    for (const item of historyItems) {
+      const li = document.createElement('li');
+      li.className = 'history-item';
+      li.setAttribute('data-id', item.id);
+      li.onclick = () => loadHistoryState(item.id);
+
+      const detailsDiv = document.createElement('div');
+      detailsDiv.className = 'details';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'name';
+      nameSpan.textContent = item.name || 'Untitled';
+      if (item.status && item.status !== 'ready') {
+        const statusSpan = document.createElement('span');
+        statusSpan.className = 'muted small';
+        statusSpan.textContent = ` (${item.status}...)`;
+        nameSpan.appendChild(statusSpan);
+      }
+
+      const metaSpan = document.createElement('span');
+      metaSpan.className = 'meta';
+      metaSpan.textContent = `${item.rowCount} rows · ${new Date(item.updatedAt).toLocaleDateString()}`;
+      
+      detailsDiv.append(nameSpan, metaSpan);
+      li.appendChild(detailsDiv);
+      list.appendChild(li);
+    }
+  } catch (e) {
+    console.error('Failed to render history', e);
+    list.innerHTML = '<li class="muted small error">Could not load history.</li>';
+  }
+}
+
+function getUiSnapshot() {
+  return {
+    mode: MODE,
+    manualRoles: MANUAL_ROLES,
+    manualJobs: MANUAL_JOBS,
+    sort: SORT,
+    query: QUERY,
+    page: PAGE,
+    rpp: RPP,
+    charts: getChartsSnapshot(), // Capture the state of all rendered charts
+  };
+}
+
+async function saveCurrentStateToHistory(fileName, forceNew = false) {
+  if (!ROWS || !PROFILE) return;
+
+  showToast('Saving to history...', 'info');
+  try {
+    const isUpdating = !forceNew && window.currentHistoryId;
+    
+    let finalName = fileName || 'Untitled Report';
+    // Add timestamp to new reports, but not when updating an existing one
+    if (!isUpdating) {
+      finalName = `${finalName.replace(/\s\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/, '')} ${getFormattedDateTime()}`;
+    }
+
+    const historyItem = {
+      id: isUpdating ? window.currentHistoryId : crypto.randomUUID(),
+      sig: signatureFromHeaders(),
+      name: finalName,
+      columns: DATA_COLUMNS,
+      rowCount: ROWS.length,
+      meta: LAST_PARSE_META,
+      uiSnapshot: getUiSnapshot(),
+      status: 'saving', // Initially mark as saving
+    };
+
+    const id = await Store.saveHistory(historyItem);
+    window.currentHistoryId = id;
+    await renderHistorySidebar(); // Show "saving..." state immediately
+
+    try {
+      // Persist chunks
+      const chunkSize = 5000;
+      let idx = 0;
+      for (let i = 0; i < ROWS.length; i += chunkSize) {
+        const chunk = ROWS.slice(i, i + chunkSize);
+        await Store.appendChunk(id, idx++, chunk);
+        if (idx % 5 === 0) await new Promise(r => setTimeout(r, 0)); // Yield to main thread
+      }
+      
+      // Once all chunks are saved, update the status to 'ready'
+      await Store.updateHistory(id, { status: 'ready' });
+      showToast('Saved to history.', 'success');
+    } catch (e) {
+      console.error('Chunk saving failed:', e);
+      await Store.updateHistory(id, { status: 'error' });
+      showToast('Failed to save report data.', 'error');
+    } finally {
+      await renderHistorySidebar(); // Refresh to show final status
+    }
+  } catch (e) {
+    console.error('Failed to save history', e);
+    showToast('Failed to save history.', 'error');
+  }
+}
+
+function getChartsSnapshot() {
+  const charts = [];
+  document.querySelectorAll('#results .card').forEach((card, cardIndex) => {
+    const cardTitle = card.querySelector('.card-title')?.textContent || '';
+    const cardCharts = [];
+
+    const planJob = (window.CURRENT_PLAN && window.CURRENT_PLAN.jobs && window.CURRENT_PLAN.jobs[cardIndex]) || null;
+
+    // Prefer the job definition persisted on the card (captures edits), fall back to plan
+    const ds = card.dataset || {};
+    const derivedJobKey = {
+      groupBy: ds.groupBy || planJob?.groupBy || '',
+      metric: (ds.metric !== undefined ? ds.metric : (planJob?.metric ?? '')) || '',
+      agg: ds.agg || planJob?.agg || 'sum',
+      dateBucket: ds.dateBucket || planJob?.dateBucket || ''
+    };
+    // Normalize metric: empty string means count
+    if (derivedJobKey.metric === '') derivedJobKey.metric = null;
+
+    card.querySelectorAll('.chart-card').forEach(chartCard => {
+      const type = chartCard.querySelector('select')?.value || 'auto';
+      const topN = chartCard.querySelector('input[type="number"]')?.value || '20';
+      cardCharts.push({
+        type,
+        topN,
+        jobKey: derivedJobKey
+      });
+    });
+    charts.push({ title: cardTitle, cardJobKey: derivedJobKey, charts: cardCharts });
+  });
+  return charts;
+}
+
+async function loadHistoryState(id) {
+  showToast('Loading history...', 'info');
+  try {
+    const history = await Store.getHistory(id);
+    if (!history) {
+      showToast('History item not found.', 'error');
+      return;
+    }
+    if (history.status === 'saving') {
+      showToast('This report is still saving. Please wait.', 'info');
+      return;
+    }
+    if (history.status === 'error') {
+      showToast('This report is corrupted and cannot be loaded.', 'error');
+      return;
+    }
+
+    const { rows } = await Store.restoreHistory(id);
+    if (!rows) {
+      showToast('Failed to load report data.', 'error');
+      return;
+    }
+
+    // Restore data
+    ROWS = rows;
+    DATA_COLUMNS = history.columns || [];
+    LAST_PARSE_META = history.meta || {};
+    PROFILE = profile(ROWS);
+    
+    // Restore UI state from snapshot
+    const snapshot = history.uiSnapshot || {};
+    MODE = snapshot.mode || 'auto';
+    MANUAL_ROLES = snapshot.manualRoles || {};
+    MANUAL_JOBS = snapshot.manualJobs || [];
+    SORT = snapshot.sort || { col: null, dir: 'asc' };
+    QUERY = snapshot.query || '';
+    PAGE = snapshot.page || 1;
+    RPP = snapshot.rpp || 25;
+
+    // Update UI elements
+    $('#meta').textContent = `Loaded ${PROFILE.rowCount.toLocaleString()} rows from history.`;
+    $('#searchInput').value = QUERY;
+    $('#rowsPerPage').value = RPP;
+    $('#mode').value = MODE;
+    switchMode(MODE);
+    
+    // Render everything
+    renderProfile(PROFILE);
+    buildRawHeader(DATA_COLUMNS);
+    applyFilter();
+    renderRawBody();
+    renderAggregates(snapshot.charts); // Pass the saved chart snapshot
+
+    window.currentHistoryId = id;
+    showToast(`Loaded "${history.name || 'Untitled'}"`, 'success');
+  } catch (e) {
+    console.error('Failed to load history state', e);
+    showToast('Error loading history state.', 'error');
+  }
+}
+
+// Initial render
+async function openHistoryManager() {
+  const modal = $('#historyModal');
+  const listContainer = $('#history-management-list');
+  const selectAllCheckbox = $('#history-select-all');
+  const deleteSelectedBtn = $('#deleteSelectedBtn');
+  
+  listContainer.innerHTML = 'Loading...';
+  modal.classList.add('open');
+
+  try {
+    const historyItems = await Store.listHistory();
+    listContainer.innerHTML = '';
+    if (!historyItems.length) {
+      listContainer.innerHTML = '<div class="muted small" style="padding: 8px;">No history to manage.</div>';
+      selectAllCheckbox.disabled = true;
+      return;
+    }
+    selectAllCheckbox.disabled = false;
+    selectAllCheckbox.checked = false;
+
+    historyItems.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'history-manage-item';
+      div.style.display = 'flex';
+      div.style.alignItems = 'center';
+      div.style.gap = '8px';
+      div.style.padding = '8px';
+      div.style.border = '1px solid var(--border)';
+      div.style.borderRadius = 'var(--radius-xs)';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.setAttribute('data-id', item.id);
+      checkbox.className = 'history-item-checkbox';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = item.name;
+      nameSpan.style.flexGrow = '1';
+
+      const renameBtn = document.createElement('button');
+      renameBtn.textContent = 'Rename';
+      renameBtn.onclick = async () => {
+        const newName = prompt('Enter new name for this report:', item.name);
+        if (newName && newName.trim() !== '') {
+          await Store.updateHistory(item.id, { name: newName.trim() });
+          showToast('Report renamed.', 'success');
+          await renderHistorySidebar();
+          openHistoryManager(); // Refresh the modal list
+        }
+      };
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.style.background = '#fee2e2';
+      deleteBtn.style.color = '#b91c1c';
+      deleteBtn.style.border = '1px solid #fecaca';
+      deleteBtn.onclick = async () => {
+        if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
+          await Store.deleteHistory(item.id);
+          showToast('Report deleted.', 'success');
+          await renderHistorySidebar();
+          openHistoryManager(); // Refresh the modal list
+        }
+      };
+
+      div.append(checkbox, nameSpan, renameBtn, deleteBtn);
+      listContainer.appendChild(div);
+    });
+
+    // Add event listeners for bulk actions
+    const checkboxes = listContainer.querySelectorAll('.history-item-checkbox');
+    
+    function updateDeleteButtonState() {
+      const selected = listContainer.querySelectorAll('.history-item-checkbox:checked');
+      deleteSelectedBtn.disabled = selected.length === 0;
+      if (!deleteSelectedBtn.disabled) {
+        deleteSelectedBtn.style.background = '#f87171';
+        deleteSelectedBtn.style.color = '#7f1d1d';
+        deleteSelectedBtn.style.cursor = 'pointer';
+      } else {
+        deleteSelectedBtn.style.background = '#fca5a5';
+        deleteSelectedBtn.style.color = '#7f1d1d';
+        deleteSelectedBtn.style.cursor = 'not-allowed';
+      }
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener('change', updateDeleteButtonState));
+    
+    selectAllCheckbox.onchange = () => {
+      checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+      updateDeleteButtonState();
+    };
+    
+    updateDeleteButtonState();
+
+  } catch (e) {
+    console.error('Failed to load history for management', e);
+    listContainer.innerHTML = '<div class="muted small error" style="padding: 8px;">Could not load history.</div>';
+  }
+}
+
+$('#manageHistoryBtn').onclick = openHistoryManager;
+$('#closeHistoryModal').onclick = () => $('#historyModal').classList.remove('open');
+
+$('#deleteSelectedBtn').onclick = async () => {
+  const selected = document.querySelectorAll('#history-management-list .history-item-checkbox:checked');
+  if (selected.length === 0) return;
+
+  if (confirm(`Are you sure you want to delete ${selected.length} selected report(s)?`)) {
+    for (const cb of selected) {
+      const id = cb.getAttribute('data-id');
+      await Store.deleteHistory(id);
+    }
+    showToast(`${selected.length} report(s) deleted.`, 'success');
+    await renderHistorySidebar();
+    openHistoryManager(); // Refresh modal
+  }
+};
+
+$('#clearAllHistoryBtn').onclick = async () => {
+  if (confirm('Are you sure you want to delete ALL saved reports? This action cannot be undone.')) {
+    const historyItems = await Store.listHistory();
+    for (const item of historyItems) {
+      await Store.deleteHistory(item.id);
+    }
+    showToast('All history has been cleared.', 'success');
+    await renderHistorySidebar();
+    $('#historyModal').classList.remove('open');
+  }
+};
+
+document.addEventListener('DOMContentLoaded', renderHistorySidebar);
+
 </script>
+</main>
 </body>
 </html>

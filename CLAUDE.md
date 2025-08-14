@@ -8,10 +8,11 @@ This is a **client-side CSV visualization application** that transforms CSV data
 
 ### Key Architecture Components
 
-- **Single-page application**: All functionality contained in `index.html` with embedded JavaScript
+- **Single-page application**: All functionality contained in `index.html` with embedded JavaScript (~1700+ lines)
 - **Web Worker architecture**: Uses `parser.worker.js` for non-blocking CSV parsing with PapaParse
-- **Real-time data processing**: Auto-detects data types and generates aggregations using DuckDB-wasm concepts
-- **Progressive Web App**: Includes service worker and manifest for offline functionality
+- **IndexedDB storage**: `store.js` provides chunked dataset persistence and history management
+- **Real-time data processing**: Auto-detects data types and generates aggregations
+- **No build system**: Pure HTML/CSS/JS with CDN dependencies
 
 ## Development Setup
 
@@ -62,6 +63,7 @@ date: /(date|time|day|month|quarter|year|日期)/i
 
 - `index.html`: Main application with embedded CSS/JS (~1700+ lines)
 - `parser.worker.js`: Web Worker for CSV parsing with PapaParse (~60 lines)
+- `store.js`: IndexedDB wrapper for dataset persistence and chunked storage (~186 lines)
 - `README.md`: User documentation and setup instructions
 - `context.md`: Detailed project context and requirements
 
@@ -69,7 +71,7 @@ date: /(date|time|day|month|quarter|year|日期)/i
 
 - **PapaParse 5.4.1**: CSV parsing with auto-delimiter detection
 - **Chart.js 4.4.3**: Responsive chart rendering
-- **DuckDB-wasm** (planned): In-browser analytical queries
+- **IndexedDB**: Native browser storage for persistence
 
 ## Chart Types & Logic
 
@@ -109,11 +111,15 @@ When modifying the application:
 
 ## State Management
 
-- Raw data: `ROWS` array
-- Column metadata: `PROFILE` object
-- UI state: `PAGE`, `RPP`, `QUERY`, `SORT`
-- Manual overrides: `MANUAL_ROLES`, `MANUAL_JOBS`
-- Persistence: localStorage with dataset signature matching
+- **In-memory state** (global variables in index.html):
+  - Raw data: `ROWS` array
+  - Column metadata: `PROFILE` object
+  - UI state: `PAGE`, `RPP`, `QUERY`, `SORT`
+  - Manual overrides: `MANUAL_ROLES`, `MANUAL_JOBS`
+- **Persistent state** (IndexedDB via store.js):
+  - Dataset history with metadata
+  - Chunked row storage for large datasets
+  - UI snapshots and manual role overrides
 
 ## Browser Compatibility
 
@@ -121,6 +127,29 @@ When modifying the application:
 - Web Workers and IndexedDB required
 - Canvas 2D context for Chart.js
 - File API for CSV upload
+
+## Key Implementation Details
+
+### Web Worker Communication
+- `parser.worker.js` uses PapaParse for CSV parsing in background thread
+- Error handling for cross-origin and script loading issues
+- Chunked processing with progress callbacks
+
+### Data Persistence Architecture
+- `store.js` implements versioned IndexedDB schema (v2)
+- Chunked storage system for memory-efficient large dataset handling
+- History tracking with dataset signatures for deduplication
+
+### UI/Component System
+- No framework - vanilla JS with DOM manipulation
+- CSS custom properties for theming
+- Responsive design with CSS Grid/Flexbox
+- Modal system for role overrides and settings
+
+### Testing Approach
+- Manual testing only (no automated test framework)
+- Focus on CSV format compatibility and large dataset performance
+- Mobile responsiveness verification required
 
 ## Future AI Integration
 
