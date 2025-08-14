@@ -35,12 +35,14 @@
 }
 
 *{box-sizing:border-box}
-html{color-scheme:light}
+html{color-scheme:light; height: 100%;}
 body{
   margin:0; background:var(--bg); color:var(--ink);
   font-family:system-ui, Segoe UI, Arial, sans-serif;
   font-size:var(--fs-0); line-height:var(--lh);
   text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased;
+  height: 100%;
+  overflow: hidden; /* Prevent body from scrolling */
 }
 
 :root{ accent-color: var(--accent); }
@@ -914,7 +916,7 @@ mark {
   }
   .main-content {
     flex-grow: 1;
-    height: 100vh;
+    /* height is now implicitly controlled by the flex container (body) */
     overflow-y: auto;
   }
 </style>
