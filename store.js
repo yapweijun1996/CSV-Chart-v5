@@ -139,38 +139,50 @@ export async function appendChunk(id, chunkIndex, rows) {
   await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
 }
 
-export async function loadChunks(id, onChunk) {
+export async function countChunks(id) {
+  const db = await openDB();
+  const tx = db.transaction(STORE_CHUNKS, 'readonly');
+  const store = tx.objectStore(STORE_CHUNKS);
+  const idx = store.index('by_id');
+  const range = IDBKeyRange.only(id);
+  return await idbReq(idx.count(range));
+}
+
+export async function loadChunks(id, onChunk, onProgress) {
   const db = await openDB();
   const tx = db.transaction(STORE_CHUNKS, 'readonly');
   const store = tx.objectStore(STORE_CHUNKS);
   const idx = store.index('by_id');
   const range = IDBKeyRange.only(id);
 
-  const chunks = [];
+  const totalChunks = await countChunks(id);
+  let loadedChunks = 0;
+
   await new Promise((resolve, reject) => {
     const req = idx.openCursor(range);
-    req.onsuccess = () => {
+    req.onsuccess = async () => {
       const cursor = req.result;
-      if (!cursor) { resolve(); return; }
-      chunks.push(cursor.value);
+      if (!cursor) {
+        resolve();
+        return;
+      }
+      await onChunk(cursor.value.rows, cursor.value.chunkIndex);
+      loadedChunks++;
+      if (onProgress) {
+        onProgress(loadedChunks, totalChunks);
+      }
       cursor.continue();
     };
     req.onerror = () => reject(req.error);
   });
-
-  chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
-
-  for (const chunk of chunks) {
-    await onChunk(chunk.rows, chunk.chunkIndex);
-  }
   await new Promise((resv) => { tx.oncomplete = resv; });
 }
 
-async function loadAllRows(id) {
+async function loadAllRows(id, onProgress) {
     const rows = [];
     await loadChunks(id, (chunkRows) => {
         rows.push(...chunkRows);
-    });
+    }, onProgress);
     return rows;
 }
 
@@ -178,9 +190,9 @@ async function loadAllRows(id) {
  * Reconstructs a full history item, including its dataset rows.
  * WARNING: May be memory-heavy for large datasets.
  */
-export async function restoreHistory(id) {
+export async function restoreHistory(id, onProgress) {
   const history = await getHistory(id);
   if (!history) return null;
-  const rows = await loadAllRows(id);
+  const rows = await loadAllRows(id, onProgress);
   return { history, rows };
 }

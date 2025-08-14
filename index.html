@@ -755,8 +755,19 @@ mark {
     align-items: center;
   }
   .sidebar.collapsed .sidebar-header h3,
-  .sidebar.collapsed .history-item .details {
+  .sidebar.collapsed .history-item .details,
+  .sidebar.collapsed .sidebar-search {
     display: none;
+  }
+  .sidebar-search {
+    padding: 0 var(--s-2) var(--s-3);
+  }
+  #history-search {
+    width: 100%;
+    padding: var(--s-3);
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border);
+    background: var(--panel);
   }
   #sidebar-toggle {
     background: transparent;
@@ -775,33 +786,62 @@ mark {
   .history-item {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: var(--radius-xs);
-    padding: var(--s-4);
-    cursor: pointer;
-    transition: background 0.2s ease;
+    border-radius: var(--radius); /* Larger radius */
+    padding: var(--s-5); /* More padding */
+    transition: all 0.2s ease;
     display: flex;
-    align-items: center;
-    gap: var(--s-4);
+    flex-direction: column; /* Stack content vertically */
+    gap: var(--s-3);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   }
   .history-item:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+    transform: translateY(-2px);
+  }
+  .history-item.active {
+    border-color: var(--accent);
     background: color-mix(in oklab, var(--accent) 8%, transparent);
-  }
-  .history-item .icon {
-    font-size: 20px;
-  }
-  .history-item .details {
-    flex-grow: 1;
   }
   .history-item .name {
     font-weight: 600;
-    display: block;
+    font-size: var(--fs-1);
+    color: var(--ink);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .history-item .meta {
-    font-size: var(--fs-0);
+    font-size: 0.8rem;
     color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-4);
+  }
+  .history-item .meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+  }
+  .history-item .actions {
+    display: flex;
+    gap: var(--s-3);
+    margin-top: var(--s-3);
+  }
+  .history-item .load-btn {
+    flex-grow: 1;
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: var(--s-3) var(--s-4);
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    text-align: center;
+    font-weight: 500;
+    transition: background 0.2s ease;
+  }
+  .history-item .load-btn:hover {
+    background: color-mix(in oklab, var(--accent) 85%, black);
   }
   .main-content {
     flex-grow: 1;
@@ -816,6 +856,9 @@ mark {
     <h3>History</h3>
     <button id="sidebar-toggle" title="Toggle sidebar">☰</button>
     <button id="manageHistoryBtn" title="Manage history">⚙️</button>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" id="history-search" placeholder="Search reports..." />
   </div>
   <ul id="history-list"></ul>
 </nav>
@@ -1038,41 +1081,64 @@ import * as Store from './store.js';
 /* ========= utils ========= */
 const $ = s => document.querySelector(s);
 const stripBOM = s => (s && s.charCodeAt(0) === 0xFEFF) ? s.slice(1) : s;
-function showToast(message, type = 'info', duration = 3000) {
+function showToast(message, type = 'info', duration = 3000, toastId = null) {
   const container = $('#toast-container');
   if (!container) return;
 
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
+  let toast;
+  if (toastId) {
+    toast = container.querySelector(`[data-toast-id="${toastId}"]`);
+  }
 
-  const icon = document.createElement('span');
-  icon.className = 'toast-icon';
-  if (type === 'success') icon.textContent = '✓';
-  else if (type === 'error') icon.textContent = '✗';
-  else icon.textContent = 'ℹ';
+  if (toast) {
+    // Update existing toast
+    toast.className = `toast ${type} show`;
+    toast.querySelector('.toast-message').textContent = message;
+  } else {
+    // Create new toast
+    toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    if (toastId) {
+      toast.setAttribute('data-toast-id', toastId);
+    }
 
-  const msg = document.createElement('span');
-  msg.className = 'toast-message';
-  msg.textContent = message;
+    const icon = document.createElement('span');
+    icon.className = 'toast-icon';
+    if (type === 'success') icon.textContent = '✓';
+    else if (type === 'error') icon.textContent = '✗';
+    else icon.textContent = 'ℹ';
 
-  toast.append(icon, msg);
-  container.appendChild(toast);
+    const msg = document.createElement('span');
+    msg.className = 'toast-message';
+    msg.textContent = message;
 
-  // Animate in
-  requestAnimationFrame(() => {
-    toast.classList.add('show');
-  });
+    toast.append(icon, msg);
+    container.appendChild(toast);
 
-  // Set timeout to remove
-  setTimeout(() => {
-    toast.classList.remove('show');
-    toast.classList.add('hide');
-    toast.addEventListener('transitionend', () => {
-      try {
-        container.removeChild(toast);
-      } catch {}
-    }, { once: true });
-  }, duration);
+    requestAnimationFrame(() => {
+      toast.classList.add('show');
+    });
+  }
+
+  // Clear any existing timeout
+  const existingTimeout = toast.dataset.timeoutId;
+  if (existingTimeout) {
+    clearTimeout(existingTimeout);
+  }
+
+  // Set new timeout to remove
+  if (duration > 0) {
+    const timeoutId = setTimeout(() => {
+      toast.classList.remove('show');
+      toast.classList.add('hide');
+      toast.addEventListener('transitionend', () => {
+        try {
+          container.removeChild(toast);
+        } catch {}
+      }, { once: true });
+    }, duration);
+    toast.dataset.timeoutId = timeoutId;
+  }
 }
 
 function getFormattedDateTime() {
@@ -3312,39 +3378,69 @@ toggleBtn.onclick = () => {
 
 async function renderHistorySidebar() {
   const list = $('#history-list');
+  const searchInput = $('#history-search');
+  const searchTerm = (searchInput.value || '').toLowerCase();
   list.innerHTML = '<li>Loading...</li>';
   try {
-    const historyItems = await Store.listHistory();
+    let historyItems = await Store.listHistory();
+    
+    if (searchTerm) {
+      historyItems = historyItems.filter(item =>
+        (item.name || '').toLowerCase().includes(searchTerm)
+      );
+    }
+
     list.innerHTML = '';
     if (!historyItems.length) {
-      list.innerHTML = '<li class="muted small">No history yet.</li>';
+      list.innerHTML = `<li class="muted small" style="padding: 0 var(--s-4);">${searchTerm ? 'No matching reports found.' : 'No history yet.'}</li>`;
       return;
     }
     for (const item of historyItems) {
       const li = document.createElement('li');
       li.className = 'history-item';
       li.setAttribute('data-id', item.id);
-      li.onclick = () => loadHistoryState(item.id);
-
-      const detailsDiv = document.createElement('div');
-      detailsDiv.className = 'details';
-
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'name';
-      nameSpan.textContent = item.name || 'Untitled';
-      if (item.status && item.status !== 'ready') {
-        const statusSpan = document.createElement('span');
-        statusSpan.className = 'muted small';
-        statusSpan.textContent = ` (${item.status}...)`;
-        nameSpan.appendChild(statusSpan);
+      if (item.id === window.currentHistoryId) {
+        li.classList.add('active');
       }
 
-      const metaSpan = document.createElement('span');
-      metaSpan.className = 'meta';
-      metaSpan.textContent = `${item.rowCount} rows · ${new Date(item.updatedAt).toLocaleDateString()}`;
+      const nameSpan = document.createElement('div');
+      nameSpan.className = 'name';
+      nameSpan.textContent = item.name || 'Untitled';
+      nameSpan.title = item.name || 'Untitled';
+
+      const metaDiv = document.createElement('div');
+      metaDiv.className = 'meta';
       
-      detailsDiv.append(nameSpan, metaSpan);
-      li.appendChild(detailsDiv);
+      const dateSpan = document.createElement('span');
+      dateSpan.innerHTML = `📅 ${new Date(item.updatedAt).toLocaleDateString()}`;
+      
+      const rowsSpan = document.createElement('span');
+      rowsSpan.innerHTML = `≡ ${item.rowCount.toLocaleString()} rows`;
+
+      const colsSpan = document.createElement('span');
+      colsSpan.innerHTML = `📊 ${item.columns.length} cols`;
+
+      metaDiv.append(dateSpan, rowsSpan, colsSpan);
+
+      const actionsDiv = document.createElement('div');
+      actionsDiv.className = 'actions';
+
+      const loadBtn = document.createElement('button');
+      loadBtn.className = 'load-btn';
+      loadBtn.textContent = 'Load';
+      loadBtn.onclick = (e) => {
+        e.stopPropagation(); // prevent li click
+        loadHistoryState(item.id);
+      };
+      
+      if (item.status && item.status !== 'ready') {
+        loadBtn.textContent = `Saving...`;
+        loadBtn.disabled = true;
+      }
+
+      actionsDiv.appendChild(loadBtn);
+      
+      li.append(nameSpan, metaDiv, actionsDiv);
       list.appendChild(li);
     }
   } catch (e) {
@@ -3369,12 +3465,13 @@ function getUiSnapshot() {
 async function saveCurrentStateToHistory(fileName, forceNew = false) {
   if (!ROWS || !PROFILE) return;
 
-  showToast('Saving to history...', 'info');
+  const toastId = `toast-${Date.now()}`;
+  showToast('Saving report... 0%', 'info', 999999, toastId);
+
   try {
     const isUpdating = !forceNew && window.currentHistoryId;
     
     let finalName = fileName || 'Untitled Report';
-    // Add timestamp to new reports, but not when updating an existing one
     if (!isUpdating) {
       finalName = `${finalName.replace(/\s\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/, '')} ${getFormattedDateTime()}`;
     }
@@ -3387,36 +3484,37 @@ async function saveCurrentStateToHistory(fileName, forceNew = false) {
       rowCount: ROWS.length,
       meta: LAST_PARSE_META,
       uiSnapshot: getUiSnapshot(),
-      status: 'saving', // Initially mark as saving
+      status: 'saving',
     };
 
     const id = await Store.saveHistory(historyItem);
     window.currentHistoryId = id;
-    await renderHistorySidebar(); // Show "saving..." state immediately
+    await renderHistorySidebar();
 
     try {
-      // Persist chunks
       const chunkSize = 5000;
+      const totalChunks = Math.ceil(ROWS.length / chunkSize);
       let idx = 0;
       for (let i = 0; i < ROWS.length; i += chunkSize) {
         const chunk = ROWS.slice(i, i + chunkSize);
         await Store.appendChunk(id, idx++, chunk);
-        if (idx % 5 === 0) await new Promise(r => setTimeout(r, 0)); // Yield to main thread
+        const progress = Math.round((idx / totalChunks) * 100);
+        showToast(`Saving report... ${progress}%`, 'info', 999999, toastId);
+        if (idx % 5 === 0) await new Promise(r => setTimeout(r, 0));
       }
       
-      // Once all chunks are saved, update the status to 'ready'
       await Store.updateHistory(id, { status: 'ready' });
-      showToast('Saved to history.', 'success');
+      showToast('Report saved successfully!', 'success', 3000, toastId);
     } catch (e) {
       console.error('Chunk saving failed:', e);
       await Store.updateHistory(id, { status: 'error' });
-      showToast('Failed to save report data.', 'error');
+      showToast('Failed to save report data.', 'error', 3000, toastId);
     } finally {
-      await renderHistorySidebar(); // Refresh to show final status
+      await renderHistorySidebar();
     }
   } catch (e) {
     console.error('Failed to save history', e);
-    showToast('Failed to save history.', 'error');
+    showToast('Failed to save history.', 'error', 3000, toastId);
   }
 }
 
@@ -3454,25 +3552,32 @@ function getChartsSnapshot() {
 }
 
 async function loadHistoryState(id) {
-  showToast('Loading history...', 'info');
+  const toastId = `toast-${Date.now()}`;
+  showToast('Loading report... 0%', 'info', 999999, toastId);
   try {
-    const history = await Store.getHistory(id);
-    if (!history) {
-      showToast('History item not found.', 'error');
+    const onProgress = (loaded, total) => {
+      const progress = total > 0 ? Math.round((loaded / total) * 100) : 100;
+      showToast(`Loading report... ${progress}%`, 'info', 999999, toastId);
+    };
+
+    const result = await Store.restoreHistory(id, onProgress);
+    if (!result) {
+      showToast('History item not found.', 'error', 3000, toastId);
       return;
     }
+    
+    const { history, rows } = result;
+
     if (history.status === 'saving') {
-      showToast('This report is still saving. Please wait.', 'info');
+      showToast('This report is still saving. Please wait.', 'info', 3000, toastId);
       return;
     }
     if (history.status === 'error') {
-      showToast('This report is corrupted and cannot be loaded.', 'error');
+      showToast('This report is corrupted and cannot be loaded.', 'error', 3000, toastId);
       return;
     }
-
-    const { rows } = await Store.restoreHistory(id);
     if (!rows) {
-      showToast('Failed to load report data.', 'error');
+      showToast('Failed to load report data.', 'error', 3000, toastId);
       return;
     }
 
@@ -3504,13 +3609,14 @@ async function loadHistoryState(id) {
     buildRawHeader(DATA_COLUMNS);
     applyFilter();
     renderRawBody();
-    renderAggregates(snapshot.charts); // Pass the saved chart snapshot
+    renderAggregates(snapshot.charts);
 
     window.currentHistoryId = id;
-    showToast(`Loaded "${history.name || 'Untitled'}"`, 'success');
+    showToast(`Loaded "${history.name || 'Untitled'}"`, 'success', 3000, toastId);
+    renderHistorySidebar(); // To update active state
   } catch (e) {
     console.error('Failed to load history state', e);
-    showToast('Error loading history state.', 'error');
+    showToast('Error loading history state.', 'error', 3000, toastId);
   }
 }
 
@@ -3647,6 +3753,7 @@ $('#clearAllHistoryBtn').onclick = async () => {
 };
 
 document.addEventListener('DOMContentLoaded', renderHistorySidebar);
+$('#history-search').addEventListener('input', debounce(renderHistorySidebar, 250));
 
 </script>
 </main>
