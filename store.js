@@ -160,27 +160,32 @@ export async function loadChunks(id, onChunk, onProgress) {
   const idx = store.index('by_id');
   const range = IDBKeyRange.only(id);
 
-  const totalChunks = await countChunks(id);
+  const totalChunks = await idbReq(idx.count(range));
   let loadedChunks = 0;
 
-  await new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const req = idx.openCursor(range);
-    req.onsuccess = async () => {
-      const cursor = req.result;
-      if (!cursor) {
-        resolve();
-        return;
-      }
-      await onChunk(cursor.value.rows, cursor.value.chunkIndex);
-      loadedChunks++;
-      if (onProgress) {
-        onProgress(loadedChunks, totalChunks);
-      }
-      cursor.continue();
-    };
+
     req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) {
+        // Using a promise chain to ensure onChunk completes before continuing
+        Promise.resolve(onChunk(cursor.value.rows, cursor.value.chunkIndex))
+          .then(() => {
+            loadedChunks++;
+            if (onProgress) {
+              onProgress(loadedChunks, totalChunks);
+            }
+            cursor.continue();
+          })
+          .catch(reject);
+      }
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
   });
-  await new Promise((resv) => { tx.oncomplete = resv; });
 }
 
 async function loadAllRows(id, onProgress) {
