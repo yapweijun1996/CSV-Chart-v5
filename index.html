@@ -959,6 +959,15 @@ mark {
         <span class="tooltip tooltip-wide" data-tooltip="Check if your CSV's first row contains column names instead of data. Usually enabled for standard CSV files."></span>
       </label>
 
+      <label>Date Format:
+        <span class="tooltip" data-tooltip="Specify the date format for parsing."></span>
+        <select id="dateFormat">
+          <option value="auto">Auto</option>
+          <option value="dd/mm/yyyy">dd/mm/yyyy</option>
+          <option value="mm/dd/yyyy">mm/dd/yyyy</option>
+          <option value="yyyy-mm-dd">yyyy-mm-dd</option>
+        </select>
+      </label>
       <label class="tag">
         Mode:
         <span class="tooltip tooltip-wide" data-tooltip="Auto: Uses AI-like detection to automatically assign column roles and generate aggregates. Manual: Allows you to override column roles and add custom aggregates.">
@@ -1257,8 +1266,18 @@ const nice = n => { if (n==null || isNaN(n)) return ''; const a=Math.abs(n);
   if (a>=1e9) return (n/1e9).toFixed(1)+'B';
   if (a>=1e6) return (n/1e6).toFixed(1)+'M';
   if (a>=1e3) return (n/1e3).toFixed(1)+'K';
-  return String(Number((+n).toFixed(2)));
+  return formatNumber(Number((+n).toFixed(2)));
 };
+function formatNumber(n) {
+  if (n == null || isNaN(n)) return '';
+  const parts = String(n).split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (parts.length > 1) {
+    parts[1] = parts[1].padEnd(2, '0');
+    return parts.join('.');
+  }
+  return parts[0];
+}
 function debounce(fn, ms=250){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); }; }
 
 // Debounced auto-save function
@@ -1270,28 +1289,62 @@ const debouncedAutoSave = debounce(() => {
 }, 1500);
 
 /* ========= safer date parsing ========= */
-function parseDateSafe(v){
+function parseDateSafe(v, format = 'auto') {
   if (!v) return NaN;
   const s = String(v).trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-    // Parse ISO date format (YYYY-MM-DD) as UTC
-    const [, year, month, day] = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  
+  const parseWithFormat = (dateStr, fmt) => {
+    let day, month, year;
+    if (fmt === 'dd/mm/yyyy') {
+      const m = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/.exec(dateStr);
+      if (m) {
+        day = +m[1];
+        month = +m[2];
+        year = +m[3];
+      }
+    } else if (fmt === 'mm/dd/yyyy') {
+      const m = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/.exec(dateStr);
+      if (m) {
+        month = +m[1];
+        day = +m[2];
+        year = +m[3];
+      }
+    } else if (fmt === 'yyyy-mm-dd') {
+      const m = /^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/.exec(dateStr);
+      if (m) {
+        year = +m[1];
+        month = +m[2];
+        day = +m[3];
+      }
+    }
+
     if (year && month && day) {
-      return Date.UTC(+year, +month-1, +day);
+      if (year < 100) {
+        year = year < 50 ? 2000 + year : 1900 + year;
+      }
+      if (month > 0 && month <= 12 && day > 0 && day <= 31) {
+        return Date.UTC(year, month - 1, day);
+      }
+    }
+    return NaN;
+  };
+
+  if (format !== 'auto') {
+    return parseWithFormat(s, format);
+  }
+
+  // Auto-detection logic
+  const formatsToTry = ['dd/mm/yyyy', 'mm/dd/yyyy', 'yyyy-mm-dd'];
+  for (const fmt of formatsToTry) {
+    const timestamp = parseWithFormat(s, fmt);
+    if (!isNaN(timestamp)) {
+      return timestamp;
     }
   }
-  // Handle DD/MM/YY or DD/MM/YYYY formats
-  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(s);
-  if (m) {
-    // For DD/MM/YY format, assume 20xx for years 00-49 and 19xx for years 50-99
-    let year = +m[3];
-    if (year < 100) {
-      year = year < 50 ? 2000 + year : 1900 + year;
-    }
-    return Date.UTC(year, +m[2]-1, +m[1]);
-  }
+
+  // Fallback for ISO and other standard formats
   const u = Date.parse(s);
-  return isNaN(u) ? NaN : u; // leave as-is for other variants
+  return isNaN(u) ? NaN : u;
 }
 
 /* ========= state ========= */
@@ -1486,158 +1539,28 @@ async function parseCSV(file, delimiterChoice, header=true){
       reject(err || new Error(reason || 'Unknown parse error'));
     };
 
+    // Bypassing the worker due to timeout issues
+    const fallbackConfig = {
+      worker: false,
+      header,
+      skipEmptyLines: 'greedy',
+      dynamicTyping: false,
+      delimiter,
+      quoteChar: '"',
+      escapeChar: '"',
+      step: (results) => {
+        rowCount++;
+        if (results && 'data' in results) collectedRows.push(results.data);
+        if ((rowCount % 1000) === 0) $('#meta').textContent = `Parsing… ${rowCount.toLocaleString()} rows`;
+      },
+      complete: completeHandler,
+      error: errorHandler
+    };
     try {
-      // Prefer self-hosted worker to avoid cross-origin worker issues
-      const worker = new Worker('parser.worker.js');
-      isUsingWorker = true;
-      const workerTimeout = setTimeout(()=>{
-        console.error('Worker timeout - switching to non-worker fallback');
-        try{ worker.terminate(); }catch{}
-        // Start fallback
-        const fallbackConfig = {
-          worker: false,
-          header,
-          skipEmptyLines:'greedy',
-          dynamicTyping:false,
-          delimiter,
-          quoteChar:'"',
-          escapeChar:'"',
-          step: (results)=>{
-            rowCount++;
-            if (results && 'data' in results) collectedRows.push(results.data);
-            if ((rowCount % 1000)===0) $('#meta').textContent = `Parsing… ${rowCount.toLocaleString()} rows (fallback)`;
-          },
-          complete: completeHandler,
-          error: errorHandler
-        };
-        try{ Papa.parse(file, fallbackConfig); }catch(fallbackErr){
-          console.error('Fallback parse failed to start after worker timeout:', fallbackErr);
-          reject(new Error('Both worker and non-worker parsing failed to start'));
-        }
-      }, 30000);
-      
-      worker.onmessage = (e)=>{
-        clearTimeout(workerTimeout);
-        if (!e || !e.data){
-          console.warn('Worker sent empty message; falling back');
-          const fallbackConfig = {
-            worker: false,
-            header,
-            skipEmptyLines:'greedy',
-            dynamicTyping:false,
-            delimiter,
-            quoteChar:'"',
-            escapeChar:'"',
-            step: (results)=>{
-              rowCount++;
-              if (results && 'data' in results) collectedRows.push(results.data);
-              if ((rowCount % 1000)===0) $('#meta').textContent = `Parsing… ${rowCount.toLocaleString()} rows (fallback)`;
-            },
-            complete: completeHandler,
-            error: errorHandler
-          };
-          try{ Papa.parse(file, fallbackConfig); }catch(fallbackErr){
-            console.error('Fallback parse failed to start:', fallbackErr);
-            reject(new Error('Both worker and non-worker parsing failed to start'));
-          }
-          return;
-        }
-        const msg = e.data;
-        if (msg.error){
-          console.warn('Worker error:', msg.message);
-          const fallbackConfig = {
-            worker: false,
-            header,
-            skipEmptyLines:'greedy',
-            dynamicTyping:false,
-            delimiter,
-            quoteChar:'"',
-            escapeChar:'"',
-            step: (results)=>{
-              rowCount++;
-              if (results && 'data' in results) collectedRows.push(results.data);
-              if ((rowCount % 1000)===0) $('#meta').textContent = `Parsing… ${rowCount.toLocaleString()} rows (fallback)`;
-            },
-            complete: completeHandler,
-            error: errorHandler
-          };
-          try{ Papa.parse(file, fallbackConfig); }catch(fallbackErr){
-            console.error('Fallback parse failed to start:', fallbackErr);
-            reject(new Error('Both worker and non-worker parsing failed to start'));
-          }
-          return;
-        }
-        // Optional progress support if worker posts {progress}
-        if ('progress' in msg){
-          $('#meta').textContent = `Parsing… ${Number(msg.progress||0).toLocaleString()} rows (worker)`;
-          return;
-        }
-        // Normal completion path
-        try{
-          const results = { data: Array.isArray(msg.data)?msg.data:[], meta: msg.meta||{}, errors: Array.isArray(msg.errors)?msg.errors:[] };
-          completeHandler(results);
-        } finally {
-          try{ worker.terminate(); }catch{}
-        }
-      };
-      
-      worker.onerror = (err)=>{
-        clearTimeout(workerTimeout);
-        console.error('Worker onerror:', err?.message || err);
-        const fallbackConfig = {
-          worker: false,
-          header,
-          skipEmptyLines:'greedy',
-          dynamicTyping:false,
-          delimiter,
-          quoteChar:'"',
-          escapeChar:'"',
-          step: (results)=>{
-            rowCount++;
-            if (results && 'data' in results) collectedRows.push(results.data);
-            if ((rowCount % 1000)===0) $('#meta').textContent = `Parsing… ${rowCount.toLocaleString()} rows (fallback)`;
-          },
-          complete: completeHandler,
-          error: errorHandler
-        };
-        try{ Papa.parse(file, fallbackConfig); }catch(fallbackErr){
-          console.error('Fallback parse failed to start after worker error:', fallbackErr);
-          reject(new Error('Both worker and non-worker parsing failed to start'));
-        }
-      };
-      
-      const workerConfig = {
-        header,
-        skipEmptyLines:'greedy',
-        dynamicTyping:false,
-        delimiter,
-        quoteChar:'"',
-        escapeChar:'"'
-      };
-      worker.postMessage({ file, config: workerConfig });
-    } catch (err) {
-      clearTimeout(timeout);
-      console.error('Error starting custom worker:', err);
-      const fallbackConfig = {
-        worker: false,
-        header,
-        skipEmptyLines:'greedy',
-        dynamicTyping:false,
-        delimiter,
-        quoteChar:'"',
-        escapeChar:'"',
-        step: (results)=>{
-          rowCount++;
-          if (results && 'data' in results) collectedRows.push(results.data);
-          if ((rowCount % 1000)===0) $('#meta').textContent = `Parsing… ${rowCount.toLocaleString()} rows (fallback)`;
-        },
-        complete: completeHandler,
-        error: errorHandler
-      };
-      try{ Papa.parse(file, fallbackConfig); }catch(fallbackErr){
-        console.error('Fallback parse failed to start after worker constructor error:', fallbackErr);
-        reject(new Error('Both worker and non-worker parsing failed to start'));
-      }
+      Papa.parse(file, fallbackConfig);
+    } catch (fallbackErr) {
+      console.error('Fallback parse failed to start:', fallbackErr);
+      reject(new Error('Parsing failed to start'));
     }
   });
 }
@@ -1646,7 +1569,8 @@ async function parseCSV(file, delimiterChoice, header=true){
 function inferType(v){
   if (v==null || v==='') return 'empty';
   if (isNum(v)) return 'number';
-  const t = parseDateSafe(v);
+  const dateFormat = $('#dateFormat').value;
+  const t = parseDateSafe(v, dateFormat);
   if (!Number.isNaN(t)) return 'date';
   return 'string';
 }
@@ -1723,7 +1647,8 @@ function sortRows(rows){
       if (isNaN(an) && isNaN(bn)) return 0; if (isNaN(an)) return -dir; if (isNaN(bn)) return dir;
       return an < bn ? -dir : an > bn ? dir : 0;
     } else if (t==='date'){
-      const an = parseDateSafe(av), bn = parseDateSafe(bv);
+      const dateFormat = $('#dateFormat').value;
+      const an = parseDateSafe(av, dateFormat), bn = parseDateSafe(bv, dateFormat);
       if (isNaN(an) && isNaN(bn)) return 0; if (isNaN(an)) return -dir; if (isNaN(bn)) return dir;
       return an < bn ? -dir : an > bn ? dir : 0;
     } else {
@@ -1744,7 +1669,7 @@ function renderTFootSums(){
     if (t==='number' && !isLikelyCodeColumn(col)){
       let sum = 0;
       for (const r of FILTERED_ROWS){ const n = toNum(r[col]); if (!isNaN(n)) sum += n; }
-      td.textContent = 'Σ ' + nice(sum);
+      td.textContent = 'Σ ' + formatNumber(sum);
     } else { td.textContent = ''; }
     tr.appendChild(td);
   });
@@ -1775,7 +1700,10 @@ function renderRawBody(){
     DATA_COLUMNS.forEach(c=>{
       const td = document.createElement('td');
       let v = r[c];
-      const textValue = (v==null? '' : String(v));
+      let textValue = (v==null? '' : String(v));
+      if (columnType(c) === 'number') {
+        textValue = formatNumber(toNum(v));
+      }
       
       // Apply highlighting if there's a search query
       const searchTerm = QUERY ? QUERY.trim() : '';
@@ -2184,7 +2112,8 @@ function autoPlan(profile, rows) {
 }
 
 function autoBucket(rows, dateCol){
-  const ds = rows.map(r=>parseDateSafe(r[dateCol])).filter(x=>!Number.isNaN(x));
+  const dateFormat = $('#dateFormat').value;
+  const ds = rows.map(r=>parseDateSafe(r[dateCol], dateFormat)).filter(x=>!Number.isNaN(x));
   if (!ds.length) return '';
   const spanDays = (Math.max(...ds)-Math.min(...ds))/86400000;
   if (spanDays > 400) return 'month';
@@ -2194,7 +2123,8 @@ function autoBucket(rows, dateCol){
 
 /* ========= aggregates ========= */
 function bucketDate(d, bucket){
-  const t = parseDateSafe(d); if (Number.isNaN(t)) return null;
+  const dateFormat = $('#dateFormat').value;
+  const t = parseDateSafe(d, dateFormat); if (Number.isNaN(t)) return null;
   const dt = new Date(t);
   const y = dt.getUTCFullYear(), m = dt.getUTCMonth()+1, day = dt.getUTCDate();
   if (bucket==='year') return `${y}`;
@@ -2325,8 +2255,9 @@ function groupAgg(rows, groupBy, metric, agg, dateBucket=''){
         }
       } else {
         // For regular date columns, parse the values as dates
-        const dateA = parseDateSafe(ak);
-        const dateB = parseDateSafe(bk);
+        const dateFormat = $('#dateFormat').value;
+        const dateA = parseDateSafe(ak, dateFormat);
+        const dateB = parseDateSafe(bk, dateFormat);
         
         // If both are valid dates, compare them
         if (!Number.isNaN(dateA) && !Number.isNaN(dateB)) {
@@ -2978,7 +2909,7 @@ function renderAggTable(agg, container, previewN=10){
       const td0 = document.createElement('td');
       td0.innerHTML = highlightText(String(r[0]), searchQuery);
       const td1 = document.createElement('td');
-      const numValue = nice(Number(r[1]) || 0);
+      const numValue = formatNumber(Number(r[1]) || 0);
       // Apply highlighting to numeric values too
       if (searchQuery.trim()) {
         td1.innerHTML = highlightText(String(numValue), searchQuery);
@@ -3017,7 +2948,7 @@ function renderAggTable(agg, container, previewN=10){
           const val = Number(r[i]) || 0;
           if (!isNaN(val)) sum += val;
         }
-        td.textContent = 'Σ ' + nice(sum);
+        td.textContent = 'Σ ' + formatNumber(sum);
       } else {
         td.textContent = '';
       }
@@ -3152,6 +3083,11 @@ $('#addAggConfirm').onclick = ()=>{
 };
 
 /* ========= UI glue ========= */
+// auto load csv
+$('#file').addEventListener('change', () => {
+  $('#loadBtn').click();
+});
+
 $('#loadBtn').onclick = async ()=>{
   const f=$('#file').files[0]; if(!f) return showToast('Choose a CSV first.', 'error');
   $('#meta').textContent='Parsing…';
@@ -3182,6 +3118,11 @@ $('#loadBtn').onclick = async ()=>{
 
   }catch(e){ console.error(e); showToast('Parse error: '+(e?.message||e), 'error'); $('#meta').textContent='Parse failed.'; }
 };
+
+// auto load csv
+$('#file').addEventListener('change', () => {
+  $('#loadBtn').click();
+});
 
 function switchMode(val){
   MODE = val;
