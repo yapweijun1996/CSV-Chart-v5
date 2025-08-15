@@ -457,11 +457,12 @@ input:disabled, button:disabled{
 }
 table{
   width: auto;
+  min-width: 100%;
   border-collapse: collapse;
   background: var(--panel);
   box-shadow: 0 1px 2px rgba(15,23,42,.04);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: auto;
 }
 th,td{
   border-bottom:1px solid var(--border);
@@ -482,7 +483,7 @@ th{
   top: 0;
   background: linear-gradient(180deg, #f8fafc, #e2e8f0);
   cursor: pointer;
-  z-index: 2;
+  z-index: 10;
   font-weight: 600;
   text-transform: uppercase;
   font-size: 0.75rem;
@@ -608,6 +609,10 @@ tfoot td{
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 .sticky{position:sticky; top:0; background:#f1f5f9; z-index:1}
+thead {
+  position: sticky;
+  top: 0;
+}
 
 /* Modal */
 .modal{
@@ -940,6 +945,9 @@ mark {
     <div class="bar">
       <input id="file" type="file" accept=".csv,.txt" />
       <button id="loadBtn">Load CSV</button>
+      <button id="autoBtn">Generate Cards
+        <span class="tooltip tooltip-wide" data-tooltip="This will attempt to find all numeric and date columns, then create aggregations and charts"></span>
+      </button>
       <button id="updateReportBtn" disabled>Update Report</button>
       <button id="saveAsNewBtn" disabled>Save as New</button>
       <span id="meta" class="muted"></span>
@@ -990,9 +998,6 @@ mark {
         <span class="tooltip" data-tooltip="Regenerate aggregates using current role assignments."></span>
       </button>
 
-      <button id="autoBtn">Generate Cards
-        <span class="tooltip tooltip-wide" data-tooltip="Automatically analyze your CSV data and create up to 10 interactive charts and data tables based on detected patterns and relationships."></span>
-      </button>
       <span class="tag">Up to 10 aggregates</span>
     </div>
   </div>
@@ -2722,7 +2727,7 @@ function renderChartCard(agg, chartsContainer, defaultType='auto', defaultTopN=2
 }
 
 /* ========= aggregate table (sortable + download) ========= */
-function renderAggTable(agg, container, previewN=10){
+function renderAggTable(agg, container, previewN=10, savedFilters = null){
   container.innerHTML = '';
   
   // State variables for this table
@@ -2731,7 +2736,9 @@ function renderAggTable(agg, container, previewN=10){
   let searchQuery = '';
   let sortIdx = /\((day|week|month|quarter|year)\)/i.test(agg.header[0]||'') ? 0 : 1;
   let sortDir = sortIdx===0 ? 'asc' : 'desc';
+  let allRows = [...agg.rows]; // Keep a copy of all original rows
   let filteredRows = [...agg.rows];
+  let minValue = 0;
   
   // Create table elements
   const tableControls = document.createElement('div');
@@ -2780,8 +2787,31 @@ function renderAggTable(agg, container, previewN=10){
   nextButton.textContent = 'Next';
   pager.append(prevButton, pageInfo, nextButton);
   
-  tableControls.append(searchLabel, rowsPerPageLabel, pager);
+  // Create filter controls
+  const filterLabel = document.createElement('label');
+  filterLabel.textContent = 'Min Value: ';
+  const filterInput = document.createElement('input');
+  filterInput.type = 'number';
+  filterInput.placeholder = 'Enter min value';
+  filterInput.style.width = '100px';
+  filterLabel.appendChild(filterInput);
+
+  const filterPctLabel = document.createElement('label');
+  filterPctLabel.textContent = 'Min %: ';
+  const filterPctInput = document.createElement('input');
+  filterPctInput.type = 'number';
+  filterPctInput.placeholder = 'Enter %';
+  filterPctInput.style.width = '80px';
+  filterPctInput.step = '0.01';
+  filterPctLabel.appendChild(filterPctInput);
+  
+  tableControls.append(searchLabel, rowsPerPageLabel, pager, filterLabel, filterPctLabel);
   container.appendChild(tableControls);
+
+  const filterSummary = document.createElement('div');
+  filterSummary.className = 'muted small';
+  filterSummary.style.padding = '8px 0';
+  container.appendChild(filterSummary);
   
   // Create table header
   const trh = document.createElement('tr');
@@ -2850,14 +2880,23 @@ function renderAggTable(agg, container, previewN=10){
   // Filter rows based on search query
   function filterRows() {
     const query = searchQuery.toLowerCase().trim();
-    if (!query) {
-      filteredRows = [...agg.rows];
-      return;
+    
+    // Start with all rows, then apply filters
+    let tempRows = [...allRows];
+
+    // Apply min value filter
+    if (minValue > 0) {
+      tempRows = tempRows.filter(row => (Number(row[1]) || 0) >= minValue);
+    }
+
+    // Apply search query
+    if (query) {
+      tempRows = tempRows.filter(row => {
+        return row.some(cell => String(cell).toLowerCase().includes(query));
+      });
     }
     
-    filteredRows = agg.rows.filter(row => {
-      return row.some(cell => String(cell).toLowerCase().includes(query));
-    });
+    filteredRows = tempRows;
   }
   
   // Sort rows
@@ -2909,12 +2948,13 @@ function renderAggTable(agg, container, previewN=10){
       const td0 = document.createElement('td');
       td0.innerHTML = highlightText(String(r[0]), searchQuery);
       const td1 = document.createElement('td');
-      const numValue = formatNumber(Number(r[1]) || 0);
+      const numValue = Number(r[1]) || 0;
+      const formattedNum = numValue.toFixed(2);
       // Apply highlighting to numeric values too
       if (searchQuery.trim()) {
-        td1.innerHTML = highlightText(String(numValue), searchQuery);
+        td1.innerHTML = highlightText(String(formattedNum), searchQuery);
       } else {
-        td1.textContent = numValue;
+        td1.textContent = formattedNum;
       }
       tr.append(td0, td1);
       tbody.appendChild(tr);
@@ -2959,11 +2999,37 @@ function renderAggTable(agg, container, previewN=10){
   }
   
   // Update entire table
-  function updateTable() {
+  function updateTable(updateChart = false) {
+    const originalCount = allRows.length;
     filterRows();
+    const filteredCount = filteredRows.length;
+    
+    if (originalCount > filteredCount) {
+        const hiddenRows = allRows.filter(row => !filteredRows.some(frow => frow[0] === row[0] && frow[1] === row[1]));
+        const hiddenSum = hiddenRows.reduce((sum, row) => sum + (Number(row[1]) || 0), 0);
+        filterSummary.textContent = `Hiding ${hiddenRows.length} rows with a total value of ${formatNumber(hiddenSum)}.`;
+    } else {
+        filterSummary.textContent = '';
+    }
+
     sortRows();
     renderTableBody();
     renderTableFooter();
+
+    if (updateChart) {
+        const chartCard = container.closest('.card').querySelector('.chart-card');
+        if (chartCard) {
+            const canvas = chartCard.querySelector('canvas');
+            const typeSel = chartCard.querySelector('select');
+            const topNInput = chartCard.querySelector('input[type="number"]');
+            if (canvas && typeSel && topNInput) {
+                const topN = Number(topNInput.value) || 20;
+                const currentAgg = { header: agg.header, rows: filteredRows };
+                const cfg = computeChartConfig(currentAgg, typeSel.value, topN);
+                ensureChart(canvas, cfg, true);
+            }
+        }
+    }
   }
   
   // Event listeners
@@ -2994,8 +3060,42 @@ function renderAggTable(agg, container, previewN=10){
       updateTable();
     }
   });
+
+  const totalSum = allRows.reduce((sum, row) => sum + (Number(row[1]) || 0), 0);
+
+  const updateFilters = (source) => {
+    if (source === 'value') {
+      const value = Number(filterInput.value) || 0;
+      if (totalSum > 0) {
+        const pct = (value / totalSum) * 100;
+        filterPctInput.value = pct.toFixed(2);
+      } else {
+        filterPctInput.value = '0.00';
+      }
+      minValue = value;
+    } else if (source === 'pct') {
+      const pct = Number(filterPctInput.value) || 0;
+      const value = (pct / 100) * totalSum;
+      filterInput.value = value.toFixed(2);
+      minValue = value;
+    }
+    currentPage = 1;
+    updateTable(true);
+  };
+
+  filterInput.addEventListener('input', debounce(() => updateFilters('value'), 250));
+  filterPctInput.addEventListener('input', debounce(() => updateFilters('pct'), 250));
   
   // Initial render
+  if (savedFilters) {
+    if (savedFilters.minValue) {
+      filterInput.value = savedFilters.minValue;
+      updateFilters('value');
+    } else if (savedFilters.minPct) {
+      filterPctInput.value = savedFilters.minPct;
+      updateFilters('pct');
+    }
+  }
   updateTable();
 }
 
@@ -3116,8 +3216,11 @@ $('#loadBtn').onclick = async ()=>{
     $('#updateReportBtn').disabled = false;
     $('#saveAsNewBtn').disabled = false;
 
+
   }catch(e){ console.error(e); showToast('Parse error: '+(e?.message||e), 'error'); $('#meta').textContent='Parse failed.'; }
 };
+
+$('#autoBtn').onclick = () => renderAggregates();
 
 // auto load csv
 $('#file').addEventListener('change', () => {
@@ -3154,7 +3257,6 @@ $('#downloadFiltered').addEventListener('click', ()=>{
   showToast('Filtered CSV downloaded', 'success');
 });
 
-$('#autoBtn').onclick = () => renderAggregates();
 
 function renderAggregates(chartsSnapshot = null){
   if(!ROWS) return showToast('Load a CSV first.', 'error');
@@ -3253,7 +3355,9 @@ function renderAggregates(chartsSnapshot = null){
         renderChartCard(agg, chartsContainer, type, topN, (cardSnap.title || `${agg.header[1]} by ${agg.header[0]}`).replace(/\s+/g, '_'));
       });
 
-      const tableBox = document.createElement('div'); tableBox.className = 'table-wrap'; card.appendChild(tableBox); renderAggTable(agg, tableBox, 20);
+      const tableBox = document.createElement('div'); tableBox.className = 'table-wrap'; card.appendChild(tableBox);
+      const savedFilters = chartsSnapshot.aggFilters ? chartsSnapshot.aggFilters[cardSnap.title] : null;
+      renderAggTable(agg, tableBox, 20, savedFilters);
       grid.appendChild(card);
     });
 
@@ -3281,7 +3385,9 @@ function renderAggregates(chartsSnapshot = null){
       card.appendChild(controls);
       const chartsContainer=document.createElement('div'); chartsContainer.className='chart-cards'; card.appendChild(chartsContainer);
       renderChartCard(agg, chartsContainer, intent.preferredType || cfg.chart || 'auto', Number(cfg.topN)||20, title.replace(/\s+/g,'_'));
-      const tableBox=document.createElement('div'); tableBox.className='table-wrap'; card.appendChild(tableBox); renderAggTable(agg, tableBox, 20);
+      const tableBox=document.createElement('div'); tableBox.className='table-wrap'; card.appendChild(tableBox);
+      const savedFilters = (chartsSnapshot && chartsSnapshot.aggFilters) ? chartsSnapshot.aggFilters[title] : null;
+      renderAggTable(agg, tableBox, 20, savedFilters);
       grid.appendChild(card);
     });
   }
